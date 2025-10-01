@@ -1,0 +1,10 @@
+# Секретні ключі та конфігурації
+client_secret_*.json
+photo-print-orders-*.json
+config.php
+
+# Згенеровані залежності Composer (вони можуть містити понад 10 тисяч файлів!)
+vendor/
+
+git add .gitignore
+git add composer.json composer.lock photo-print-orders.php gdrive-upload.php ppo-ajax-script.js
