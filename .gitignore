@@ -1,7 +1,7 @@
 # Секретні ключі та конфігурації
 client_secret_*.json
 photo-print-orders-*.json
-config.php
+ppo-config.php
 
 # Згенеровані залежності Composer (вони можуть містити понад 10 тисяч файлів!)
 vendor/

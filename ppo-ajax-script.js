@@ -1,316 +1,308 @@
 jQuery(document).ready(function($) {
 
-    // --- 1. ГЛОБАЛЬНІ ЗМІННІ ---
-    const ajax_url = ppo_ajax_object.ajax_url;
+    // Отримання даних з об'єкта локалізації WP
+    const ajaxUrl = ppo_ajax_object.ajax_url;
     const nonce = ppo_ajax_object.nonce;
+    const minSum = ppo_ajax_object.min_sum;
     const prices = ppo_ajax_object.prices;
-    const min_sum = ppo_ajax_object.min_sum;
-    const max_files = 20;
+    const redirectDelivery = ppo_ajax_object.redirect_delivery;
 
-    // Сховище для файлів, обраних у поточному завантаженні (перед відправкою на сервер)
-    let currentFiles = [];
+    // Зберігаємо формати та загальну суму в JS для швидкого оновлення інтерфейсу
+    let sessionFormats = ppo_ajax_object.session_formats;
+    let sessionTotal = parseFloat(ppo_ajax_object.session_total);
+    
+    // --- Елементи DOM ---
+    const $form = $('#photo-print-order-form');
+    const $formatSelect = $('#format');
+    const $photosInput = $('#photos');
+    const $quantitiesContainer = $('#photo-quantities');
+    const $currentUploadSum = $('#current-upload-sum');
+    const $formatTotalSum = $('#format-total-sum');
+    const $sumWarning = $('#sum-warning');
+    const $submitButton = $('#submit-order');
+    const $loader = $('#ppo-loader');
+    const $messages = $('#ppo-alert-messages');
+    const $clearFormButton = $('#clear-form');
 
-    // --- 2. ФУНКЦІЇ ДЛЯ ОБЧИСЛЕННЯ ТА ВІДОБРАЖЕННЯ ---
+    // --- Допоміжні функції ---
 
     /**
-     * Генерує HTML-розмітку для одного файлу в списку.
-     * @param {string} fileName - Оригінальне ім'я файлу.
-     * @param {number} index - Індекс файлу в масиві currentFiles.
-     * @param {string} fileURL - URL для відображення мініатюри (створюється локально).
-     * @returns {string} HTML-рядок.
+     * Очищає контейнер повідомлень
      */
-    function renderPhotoItem(fileName, index, fileURL) {
-        // Унікальний ID для елементів, щоб відстежувати їх для видалення/редагування
-        const uniqueId = `file-${index}`;
-        
-        // Використовуємо `<div class="photo-thumbnail-container">` з CSS, визначеним у PHP
-        return `
-            <div class="photo-item" data-index="${index}" id="${uniqueId}">
-                <div style="display: flex; align-items: center; width: 65%;">
-                    <div class="photo-thumbnail-container">
-                        <img src="${fileURL}" alt="Мініатюра ${fileName}" loading="lazy">
-                    </div>
-                    <label title="${fileName}">${fileName}</label>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <span style="white-space: nowrap;">Кількість:</span>
-                    <input type="number" 
-                           class="file-copies" 
-                           data-index="${index}" 
-                           value="1" 
-                           min="1" 
-                           required>
-                    <button type="button" class="remove-file-btn ppo-button-secondary" data-index="${index}" style="margin-left: 10px; padding: 4px 8px;">
-                        X
-                    </button>
-                </div>
-            </div>
-        `;
+    function clearMessages() {
+        $messages.empty();
     }
 
     /**
-     * Перераховує загальну суму та копії для поточного завантаження.
+     * Відображає повідомлення користувачеві
+     * @param {string} message - Текст повідомлення
+     * @param {string} type - 'success', 'error', 'warning'
      */
-    function recalculateSums() {
-        const format = $('#format').val();
-        const pricePerPhoto = prices[format] || 0;
-        let currentUploadSum = 0;
-        let currentUploadCopies = 0;
-        const sessionTotal = ppo_ajax_object.session_total || 0;
-        let formatSessionTotal = 0;
-
-        // Отримуємо поточну суму для обраного формату в сесії
-        if (ppo_ajax_object.session_formats[format]) {
-            formatSessionTotal = ppo_ajax_object.session_formats[format].total_price;
-        }
-
-        // Ітеруємо по всіх полях кількості копій у формі
-        $('.file-copies').each(function() {
-            const copies = parseInt($(this).val()) || 0;
-            const filePrice = copies * pricePerPhoto;
-            
-            currentUploadCopies += copies;
-            currentUploadSum += filePrice;
-        });
-
-        const newFormatTotal = formatSessionTotal + currentUploadSum;
-        
-        // Оновлення полів на сторінці
-        $('#current-upload-sum').text(currentUploadSum.toFixed(0));
-        $('#format-total-sum').text(newFormatTotal.toFixed(0));
-
-        // Перевірка на мінімальну суму
-        if (newFormatTotal < min_sum && currentUploadSum > 0) {
-            $('#sum-warning').show();
-            $('#submit-order').prop('disabled', true);
-        } else {
-            $('#sum-warning').hide();
-            // Кнопка відправки активна, якщо є файли
-            $('#submit-order').prop('disabled', currentUploadSum === 0);
-        }
-        
-        return { currentUploadSum, newFormatTotal };
+    function displayMessage(message, type) {
+        clearMessages();
+        const $alert = $('<div>')
+            .addClass('ppo-message ppo-message-' + type)
+            .html('<p>' + message + '</p>');
+        $messages.append($alert);
     }
     
     /**
-     * Оновлює підсумки сесії після успішної AJAX-відповіді.
-     * @param {object} updatedData - Дані, отримані з сервера.
+     * Перераховує загальну суму для поточного формату та оновлює DOM
      */
-    function updateSessionSummary(updatedData) {
-        const $formatsList = $('#ppo-formats-list');
-        $formatsList.empty();
+    function updateCurrentUploadSummary() {
+        const selectedFormat = $formatSelect.val();
+        if (!selectedFormat) return;
+
+        const pricePerPhoto = parseFloat(prices[selectedFormat] || 0);
+        let currentUploadTotalCopies = 0;
+        let currentUploadTotalPrice = 0;
+
+        // Збираємо дані про копії з динамічних полів
+        $quantitiesContainer.find('input[type="number"]').each(function() {
+            const copies = parseInt($(this).val()) || 1;
+            currentUploadTotalCopies += copies;
+            currentUploadTotalPrice += copies * pricePerPhoto;
+        });
+
+        // Загальна сума формату (поточна сесія + нове завантаження)
+        const sessionFormatDetails = sessionFormats[selectedFormat] || { total_price: 0 };
+        const totalSumForFormat = sessionFormatDetails.total_price + currentUploadTotalPrice;
         
-        let totalCopiesOverall = 0;
-        
-        // Оновлюємо глобальні дані JS
-        ppo_ajax_object.session_formats = updatedData.formats;
-        ppo_ajax_object.session_total = updatedData.total;
-        
-        for (const format in updatedData.formats) {
-            if (updatedData.formats.hasOwnProperty(format)) {
-                const details = updatedData.formats[format];
-                $formatsList.append(`
-                    <li>${format}: ${details.total_copies} копій, ${details.total_price} грн</li>
-                `);
-                totalCopiesOverall += details.total_copies;
-            }
+        // Оновлення відображення
+        $currentUploadSum.text(currentUploadTotalPrice.toFixed(0));
+        $formatTotalSum.text(totalSumForFormat.toFixed(0));
+
+        // Перевірка мінімальної суми та керування кнопкою
+        if (totalSumForFormat < minSum) {
+            $sumWarning.show();
+            $submitButton.prop('disabled', true);
+        } else {
+            $sumWarning.hide();
+            $submitButton.prop('disabled', false);
         }
-        
-        $('#ppo-session-total').html(
-            `${updatedData.total.toFixed(0)} грн <small>(Всього копій: ${totalCopiesOverall})</small>`
-        );
-        $('#ppo-formats-list-container').show();
+
+        // Керування кнопкою
+        if (currentUploadTotalCopies === 0) {
+            $submitButton.prop('disabled', true);
+        } else if (totalSumForFormat >= minSum) {
+             $submitButton.prop('disabled', false);
+        }
     }
 
+    /**
+     * Рендерить список обраних файлів з полями для копій
+     * @param {FileList} fileList - Список файлів, обраних у формі
+     */
+    function renderFileQuantities(fileList) {
+        $quantitiesContainer.empty();
+        
+        if (fileList.length === 0) {
+            $quantitiesContainer.html('<p style="text-align: center; color: #666;">Не вибрано жодного файлу.</p>');
+            return;
+        }
 
-    // --- 3. ОБРОБНИКИ ПОДІЙ ---
+        $.each(fileList, function(i, file) {
+            const $item = $('<div class="photo-item">');
+            
+            // Контейнер для мініатюри (якщо можливо)
+            const $thumbContainer = $('<div class="photo-thumbnail-container">');
+            if (file.type.startsWith('image/')) {
+                 const reader = new FileReader();
+                 reader.onload = function(e) {
+                      $thumbContainer.html('<img src="' + e.target.result + '" alt="Мініатюра">');
+                 };
+                 reader.readAsDataURL(file);
+            } else {
+                 $thumbContainer.text('📄'); // Іконка за замовчуванням
+            }
+            $item.append($thumbContainer);
 
-    // 3.1. Вибір файлів (показуємо список та мініатюри)
-    $('#photos').on('change', function(e) {
-        const files = e.target.files;
-        const $quantitiesDiv = $('#photo-quantities');
-        $quantitiesDiv.empty();
-        currentFiles = []; // Очищуємо попередній список
+            // Назва файлу
+            const $label = $('<label>')
+                .attr('for', 'copies_' + i)
+                .text(file.name);
 
-        if (files.length > max_files) {
-             alert(`Ви можете завантажити максимум ${max_files} файлів за раз.`);
-             this.value = ''; // Скидаємо вибрані файли
-             currentFiles = [];
-             recalculateSums();
+            // Поле для кількості копій
+            const $input = $('<input>')
+                .attr({
+                    type: 'number',
+                    name: 'copies[]',
+                    id: 'copies_' + i,
+                    value: 1,
+                    min: 1
+                })
+                .on('input change', updateCurrentUploadSummary);
+            
+            // Кнопка видалення (видаляє файл з fileList, перерендерить)
+            const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
+                .data('file-index', i)
+                .on('click', function() {
+                    removeFileFromList($photosInput[0], i);
+                });
+            
+            $item.append($label, $input, $removeButton);
+            $quantitiesContainer.append($item);
+        });
+
+        updateCurrentUploadSummary();
+    }
+    
+    /**
+     * Видаляє файл зі списку file input
+     * @param {HTMLInputElement} input - Елемент input type="file"
+     * @param {number} indexToRemove - Індекс файлу для видалення
+     */
+    function removeFileFromList(input, indexToRemove) {
+        const dt = new DataTransfer();
+        const files = input.files;
+        
+        for (let i = 0; i < files.length; i++) {
+            if (i !== indexToRemove) {
+                dt.items.add(files[i]);
+            }
+        }
+        input.files = dt.files; // Оновлюємо FileList
+        
+        // Перерендеринг списку копій
+        renderFileQuantities(input.files);
+    }
+
+    /**
+     * Оновлює підсумкову таблицю замовлення
+     */
+    function updateSummaryList() {
+        const $list = $('#ppo-formats-list');
+        $list.empty();
+        
+        let totalCopiesOverall = 0;
+
+        for (const format in sessionFormats) {
+            if (format === 'order_folder_id' || !sessionFormats.hasOwnProperty(format)) continue;
+            
+            const details = sessionFormats[format];
+            const $listItem = $('<li>')
+                .text(`${format}: ${details.total_copies} копій, ${details.total_price.toFixed(0)} грн`);
+            $list.append($listItem);
+            totalCopiesOverall += details.total_copies;
+        }
+
+        $('#ppo-session-total').html(`${sessionTotal.toFixed(0)} грн <small>(Всього копій: ${totalCopiesOverall})</small>`);
+        $('#ppo-formats-list-container').show();
+    }
+    
+    // --- Обробники подій ---
+
+    // 1. При виборі формату (очищаємо поле файлів та оновлюємо підсумок)
+    $formatSelect.on('change', function() {
+        $photosInput.val(''); // Очищаємо вибрані файли
+        $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть фото для цього формату.</p>');
+        updateCurrentUploadSummary();
+    });
+
+    // 2. При виборі файлів (рендеримо поля копій)
+    $photosInput.on('change', function() {
+        const selectedFormat = $formatSelect.val();
+        const files = this.files;
+
+        clearMessages();
+
+        if (!selectedFormat) {
+            displayMessage('Будь ласка, спочатку оберіть формат фото.', 'warning');
+            this.value = null; // Очищуємо поле
+            return;
+        }
+        if (files.length > 20) {
+            displayMessage('Максимум 20 файлів дозволено за одне завантаження.', 'error');
+            this.value = null; 
+            return;
+        }
+        
+        // Рендеримо новий список
+        renderFileQuantities(files);
+    });
+    
+    // 3. Обробка натискання кнопки "Очистити"
+    $clearFormButton.on('click', function(e) {
+         e.preventDefault();
+         $photosInput.val(''); // Очистити поле вибору файлів
+         $formatSelect.val(''); // Очистити вибір формату
+         $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
+         $sumWarning.hide();
+         $submitButton.prop('disabled', true);
+         updateCurrentUploadSummary();
+         clearMessages();
+    });
+
+
+    // 4. Обробка відправки форми (AJAX)
+    $form.on('submit', function(e) {
+        e.preventDefault();
+
+        const selectedFormat = $formatSelect.val();
+        if (!$photosInput[0].files.length) {
+             displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
              return;
         }
 
-        if (files.length > 0) {
-             $quantitiesDiv.append('<h4>Список обраних фото</h4>');
-        } else {
-             $quantitiesDiv.append('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
-        }
-        
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            
-            // Створюємо локальний URL для відображення мініатюри
-            const fileURL = URL.createObjectURL(file);
-            
-            // Зберігаємо файл у тимчасовому масиві
-            currentFiles.push(file);
+        $loader.show();
+        $submitButton.prop('disabled', true);
+        clearMessages();
 
-            // Генеруємо HTML-елемент
-            $quantitiesDiv.append(renderPhotoItem(file.name, i, fileURL));
-        }
-
-        recalculateSums();
-    });
-
-    // 3.2. Вибір формату або зміна кількості копій (перерахунок)
-    $('#format, #photo-quantities').on('change', '.file-copies, #format', function() {
-        // Якщо файли не вибрано, просто деактивуємо кнопку та ховаємо попередження
-        if (currentFiles.length === 0) {
-            $('#submit-order').prop('disabled', true);
-            $('#sum-warning').hide();
-            $('#current-upload-sum').text(0);
-            return;
-        }
-        recalculateSums();
-    });
-    
-    // 3.3. Видалення файлу зі списку
-    $('#photo-quantities').on('click', '.remove-file-btn', function() {
-        const indexToRemove = parseInt($(this).data('index'));
-        
-        // 1. Видалення з DOM
-        $(`#file-${indexToRemove}`).remove();
-        
-        // 2. Видалення з масиву currentFiles (використовуємо splice)
-        if (indexToRemove > -1) {
-            currentFiles.splice(indexToRemove, 1);
-        }
-        
-        // 3. Перерахунок індексів та перемалювання списку
-        const $quantitiesDiv = $('#photo-quantities');
-        $quantitiesDiv.empty();
-        
-        if (currentFiles.length > 0) {
-            currentFiles.forEach((file, newIndex) => {
-                const fileURL = URL.createObjectURL(file);
-                 $quantitiesDiv.append(renderPhotoItem(file.name, newIndex, fileURL));
-            });
-        } else {
-             $quantitiesDiv.append('<p style="text-align: center; color: #666;">Список пустий. Додайте фото.</p>');
-        }
-
-        recalculateSums();
-    });
-    
-    // 3.4. Очищення форми
-    $('#clear-form').on('click', function() {
-        $('#photo-print-order-form')[0].reset();
-        $('#photo-quantities').empty().append('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
-        currentFiles = [];
-        ppo_ajax_object.session_total = array_sum_of_format_prices(ppo_ajax_object.session_formats); // Повертаємо загальну суму сесії
-        recalculateSums();
-    });
-    
-    // 3.5. Відправка форми через AJAX
-    $('#photo-print-order-form').on('submit', function(e) {
-        e.preventDefault();
-
-        const format = $('#format').val();
-        
-        if (!format || currentFiles.length === 0) {
-            alert('Будь ласка, виберіть формат та додайте фотографії.');
-            return;
-        }
-        
-        // Перевіряємо мінімальну суму перед відправкою
-        const { newFormatTotal } = recalculateSums();
-        if (newFormatTotal < min_sum) {
-            alert(`Загальна сума для формату ${format} повинна бути не менше ${min_sum} грн. Додайте ще копій або фото.`);
-            return;
-        }
-        
-        $('#submit-order').prop('disabled', true);
-        $('#ppo-loader').show();
-
-        // Формуємо масив кількості копій для відправки на сервер
-        const copiesArray = $('.file-copies').map(function() {
-            return parseInt($(this).val());
-        }).get();
-
-        // Створюємо FormData для відправки файлів
-        const formData = new FormData();
+        // Збираємо дані форми
+        const formData = new FormData(this);
         formData.append('action', 'ppo_file_upload');
         formData.append('ppo_ajax_nonce', nonce);
-        formData.append('format', format);
-        formData.append('order_id', $('#order_id_input').val());
-        // Надсилаємо масив кількості копій у JSON-форматі
+        
+        // Збираємо копії окремим масивом (важливо для коректної передачі)
+        const copiesArray = [];
+        $quantitiesContainer.find('input[type="number"]').each(function() {
+             copiesArray.push($(this).val());
+        });
+        // Передаємо JSON-рядок копій
         formData.append('copies', JSON.stringify(copiesArray)); 
         
-        // Додаємо файли з нашого масиву currentFiles
-        currentFiles.forEach((file, index) => {
-             // Використовуємо спільне ім'я масиву 'photos[]'
-             formData.append('photos[]', file, file.name); 
-        });
-
+        // Видаляємо дублююче поле name='copies[]'
+        formData.delete('copies[]');
+        
         $.ajax({
-            url: ajax_url,
+            url: ajaxUrl,
             type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
+            dataType: 'json',
             success: function(response) {
-                $('#ppo-loader').hide();
+                $loader.hide();
+                $photosInput.val(''); // Очищуємо поле вводу файлів
+                $quantitiesContainer.empty();
+                $formatSelect.val(''); // Очищуємо вибір формату
+                
                 if (response.success) {
-                    $('#ppo-alert-messages').html(`
-                        <div class="ppo-message ppo-message-success">
-                            <p>${response.data.message}</p>
-                        </div>
-                    `);
-                    // Оновлення блоку підсумків сесії
-                    updateSessionSummary(response.data);
+                    displayMessage(response.data.message, 'success');
                     
-                    // Очищення форми та списку файлів після успішного завантаження
-                    $('#clear-form').click();
+                    // Оновлення глобальної сесії JS
+                    sessionFormats = response.data.formats;
+                    sessionTotal = parseFloat(response.data.total);
                     
+                    updateSummaryList(); // Оновлюємо підсумок замовлення
                 } else {
-                    $('#submit-order').prop('disabled', false);
-                    $('#ppo-alert-messages').html(`
-                        <div class="ppo-message ppo-message-error">
-                            <p>Помилка: ${response.data.message}</p>
-                        </div>
-                    `);
+                    displayMessage(response.data.message, 'error');
+                    $submitButton.prop('disabled', false); // Повертаємо можливість відправки
                 }
             },
             error: function(xhr, status, error) {
-                $('#ppo-loader').hide();
-                $('#submit-order').prop('disabled', false);
-                console.error("AJAX Error:", status, error);
-                $('#ppo-alert-messages').html(`
-                    <div class="ppo-message ppo-message-error">
-                        <p>Виникла помилка зв'язку з сервером. (${xhr.status})</p>
-                    </div>
-                `);
+                $loader.hide();
+                const errorMessage = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message 
+                                   ? xhr.responseJSON.data.message 
+                                   : 'Помилка завантаження. Перевірте консоль.';
+                displayMessage(errorMessage, 'error');
+                $submitButton.prop('disabled', false);
             }
         });
     });
-    
-    // --- 4. ДОПОМІЖНІ ФУНКЦІЇ ---
 
-    // Функція для перерахунку загальної суми для JS (якщо потрібен скидання форми)
-    function array_sum_of_format_prices(formats) {
-        let total = 0;
-        for (const format in formats) {
-            if (formats.hasOwnProperty(format)) {
-                 total += formats[format].total_price;
-            }
-        }
-        return total;
-    }
+    // 5. Ініціалізація: оновлення підсумкової суми при завантаженні сторінки
+    updateSummaryList();
+    updateCurrentUploadSummary(); // На випадок, якщо потрібен рендер на старті
 
-    // --- 5. ІНІЦІАЛІЗАЦІЯ ПІД ЧАС ЗАВАНТАЖЕННЯ СТОРІНКИ ---
-    
-    // Переконаємося, що загальна сума відображається коректно при завантаженні (якщо є сесія)
-    if (ppo_ajax_object.session_total > 0) {
-        $('#ppo-formats-list-container').show();
-    }
 });
