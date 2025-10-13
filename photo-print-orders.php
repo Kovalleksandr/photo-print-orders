@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Photo Print Orders
- * Description: Плагін для замовлення друку фото з завантаженням файлів у Google Drive.
- * Version: 3.6 (Оновлена версія з конфігураційним файлом)
- * Author: Your Name
+ * Description: Плагін для замовлення друку фото з завантаженням файлів у CDN Express.
+ * Version: 4.1 (Фіналізація CDN інтеграції)
+ * Author: Помічник із програмування
  */
 
 if (!defined('ABSPATH')) {
@@ -11,30 +11,24 @@ if (!defined('ABSPATH')) {
 }
 
 // ====================================================================
-// 1. ПІДКЛЮЧЕННЯ КОНФІГУРАЦІЇ
+// 1. ПІДКЛЮЧЕННЯ КОНФІГУРАЦІЇ ТА БІБЛІОТЕК
 // ====================================================================
-/**
- * Підключення конфігураційного файлу з константами, ключами та цінами.
- * Дані переміщено для безпеки та зручності.
- */
+// Всі константи (PPO_CDN_HOST, PPO_CDN_LOGIN, PPO_CDN_PASSWORD, PPO_ERROR_URL тощо) 
+// повинні бути визначені у ppo-config.php.
 require_once plugin_dir_path(__FILE__) . 'ppo-config.php';
+require_once plugin_dir_path(__FILE__) . 'ppo-cdn-express-uploader.php'; 
 
-
-// ====================================================================
-// 2. ПІДКЛЮЧЕННЯ БІБЛІОТЕК ТА АВТОЗАВАНТАЖЕННЯ
-// ====================================================================
-// 🛑 ОБОВ'ЯЗКОВЕ ПІДКЛЮЧЕННЯ АВТОЗАВАНТАЖУВАЧА GOOGLE API (Composer)
-if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
-    require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
-} else {
-    error_log('Помилка: Google API Client бібліотека не встановлена. Використайте "composer require google/apiclient:^2.0"');
+// Перевірка наявності необхідних констант після підключення
+if (!defined('PPO_CDN_HOST') || !defined('PPO_CDN_LOGIN') || !defined('PPO_CDN_PASSWORD')) {
+    add_action('admin_notices', function() {
+        echo '<div class="notice notice-error"><p>Помилка Photo Print Orders: Не визначено CDN облікові дані. Перевірте ppo-config.php.</p></div>';
+    });
+    return; // Зупиняємо виконання плагіна, якщо конфігурація неповна
 }
-// Підключення класу-завантажувача
-require_once plugin_dir_path(__FILE__) . 'ppo-google-drive-uploader.php'; 
 
 
 // ====================================================================
-// 3. СЕСІЇ ТА ОЧИЩЕННЯ
+// 2. СЕСІЇ ТА ОЧИЩЕННЯ
 // ====================================================================
 add_action('init', 'ppo_start_session', 1);
 function ppo_start_session() {
@@ -43,19 +37,21 @@ function ppo_start_session() {
     }
 }
 add_action('init', function() {
+    // Функція для очищення всієї сесії замовлення
     if (isset($_GET['clear_session']) && $_GET['clear_session'] === '1') {
         session_destroy();
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
         }
+        // Перенаправлення на головну сторінку замовлення
         wp_safe_redirect(home_url('/order/'));
         exit;
     }
 });
 
 // ====================================================================
-// 4. РЕЄСТРАЦІЯ POST TYPE ТА КОЛОНОК
+// 3. РЕЄСТРАЦІЯ POST TYPE ТА КОЛОНОК
 // ====================================================================
 add_action('init', 'ppo_register_order_post_type');
 function ppo_register_order_post_type() {
@@ -67,41 +63,52 @@ function ppo_register_order_post_type() {
         'public' => false,
         'show_ui' => true,
         'supports' => ['title'],
+        'menu_icon' => 'dashicons-format-gallery',
     ]);
 }
 add_filter('manage_photo_order_posts_columns', function($columns) {
     $columns['details'] = 'Деталі замовлення';
+    $columns['cdn_path'] = 'CDN Шлях';
+    unset($columns['date']);
     return $columns;
 });
 add_action('manage_photo_order_posts_custom_column', function($column, $post_id) {
-    if ($column === 'details') {
-        $formats = get_post_meta($post_id, 'ppo_formats', true);
-        $total = get_post_meta($post_id, 'ppo_total', true);
-        $address = get_post_meta($post_id, 'ppo_address', true);
-        $drive_folder_id = get_post_meta($post_id, 'ppo_drive_folder_id', true);
-        
-        if ($formats) {
-            echo '<strong>Формати:</strong><br>';
-            foreach ($formats as $format => $details) {
-                 if (is_array($details) && isset($details['total_copies'])) {
-                     echo esc_html("$format: {$details['total_copies']} копій, {$details['total_price']} грн<br>");
-                 }
+    switch ($column) {
+        case 'details':
+            $formats = get_post_meta($post_id, 'ppo_formats', true);
+            $total = get_post_meta($post_id, 'ppo_total', true);
+            $address = get_post_meta($post_id, 'ppo_address', true);
+            
+            if ($formats) {
+                echo '<strong>Формати:</strong><br>';
+                foreach ($formats as $format => $details) {
+                     if (is_array($details) && isset($details['total_copies'])) {
+                         echo esc_html("$format: {$details['total_copies']} копій, {$details['total_price']} грн<br>");
+                     }
+                }
             }
-        }
-        if ($total) {
-            echo '<strong>Сума:</strong> ' . esc_html($total) . ' грн<br>';
-        }
-        if ($address) {
-            echo '<strong>Адреса:</strong> ' . esc_html($address);
-        }
-        if ($drive_folder_id) {
-             echo '<strong>Drive ID:</strong> ' . esc_html($drive_folder_id) . '<br>';
-        }
+            if ($total) {
+                echo '<strong>Сума:</strong> ' . esc_html($total) . ' грн<br>';
+            }
+            if ($address) {
+                echo '<strong>Адреса:</strong> ' . esc_html($address);
+            }
+            break;
+        case 'cdn_path':
+            $cdn_path = get_post_meta($post_id, 'ppo_cdn_folder_path', true); 
+            if ($cdn_path) {
+                // Створюємо посилання для зручності, припускаючи, що сховище доступне для перегляду
+                $full_url = 'https://' . PPO_CDN_HOST . $cdn_path;
+                 echo '<a href="' . esc_url($full_url) . '" target="_blank">' . esc_html($cdn_path) . '</a>';
+            } else {
+                 echo 'N/A';
+            }
+            break;
     }
 }, 10, 2);
 
 // ====================================================================
-// 5. РЕЄСТРАЦІЯ ШОРТКОДІВ ТА СКРИПТІВ
+// 4. РЕЄСТРАЦІЯ ШОРТКОДІВ ТА СКРИПТІВ
 // ====================================================================
 add_shortcode('photo_print_order_form', 'ppo_render_order_form');
 add_shortcode('photo_print_delivery_form', 'ppo_render_delivery_form');
@@ -109,7 +116,7 @@ add_shortcode('photo_print_payment_form', 'ppo_render_payment_form');
 
 add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 function ppo_enqueue_scripts() {
-    wp_register_script('ppo-ajax-script', plugin_dir_url(__FILE__) . 'ppo-ajax-script.js', ['jquery'], '3.5', true);
+    wp_register_script('ppo-ajax-script', plugin_dir_url(__FILE__) . 'ppo-ajax-script.js', ['jquery'], '4.1', true);
     wp_enqueue_script('ppo-ajax-script');
 
     $session_total = array_sum(array_column(array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'), 'total_price'));
@@ -117,6 +124,7 @@ function ppo_enqueue_scripts() {
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
         'ajax_url' => admin_url('admin-ajax.php'),
         'nonce'    => wp_create_nonce('ppo_ajax_nonce'),
+        'max_files' => MAX_FILES_PER_UPLOAD,
         'min_sum'  => MIN_ORDER_SUM,
         'prices'   => PHOTO_PRICES,
         'session_formats' => array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'),
@@ -127,12 +135,13 @@ function ppo_enqueue_scripts() {
 }
 
 // ====================================================================
-// 6. ОБРОБКА AJAX ЗАВАНТАЖЕННЯ ФАЙЛІВ
+// 5. ОБРОБКА AJAX ЗАВАНТАЖЕННЯ ФАЙЛІВ
 // ====================================================================
 add_action('wp_ajax_ppo_file_upload', 'ppo_ajax_file_upload');
 add_action('wp_ajax_nopriv_ppo_file_upload', 'ppo_ajax_file_upload');
 
 function ppo_ajax_file_upload() {
+    // 1. Перевірка безпеки та вхідних даних
     if (!isset($_POST['ppo_ajax_nonce']) || !wp_verify_nonce($_POST['ppo_ajax_nonce'], 'ppo_ajax_nonce')) {
         wp_send_json_error(['message' => 'Помилка безпеки.'], 403);
     }
@@ -144,7 +153,7 @@ function ppo_ajax_file_upload() {
     $files = $_FILES['photos'];
     $price_per_photo = PHOTO_PRICES[$format] ?? 0;
 
-    // --- ФІЛЬТРАЦІЯ ТА ПЕРЕВІРКА ---
+    // --- Фільтрація та перевірка файлів ---
     $files_to_move = [];
     $valid_file_index = 0;
     foreach ($files['name'] as $key => $filename) {
@@ -154,24 +163,26 @@ function ppo_ajax_file_upload() {
          if (!in_array($files['type'][$key], ALLOWED_MIME_TYPES)) {
              wp_send_json_error(['message' => 'Дозволені лише JPEG або PNG файли.'], 400);
          }
+         // Визначаємо кількість копій
          $copies_count = isset($copies[$valid_file_index]) ? intval($copies[$valid_file_index]) : 1;
          $copies_count = max(1, $copies_count); 
          
          $files_to_move[] = [
-             'name' => $filename,
+             'name' => sanitize_file_name($filename), // Очищення імені файлу
              'tmp_name' => $files['tmp_name'][$key],
              'copies_count' => $copies_count, 
          ];
          $valid_file_index++; 
     }
+    
     if ($valid_file_index === 0) {
         wp_send_json_error(['message' => 'Не знайдено жодного файлу для завантаження.'], 400);
     }
     if ($valid_file_index > MAX_FILES_PER_UPLOAD) {
-        wp_send_json_error(['message' => 'Максимум ' . MAX_FILES_PER_UPLOAD . ' файлів дозволено.'], 400);
+        wp_send_json_error(['message' => 'Максимум ' . MAX_FILES_PER_UPLOAD . ' файлів дозволено за раз.'], 400);
     }
     
-    // Перерахунок
+    // Перерахунок суми
     $photo_count = 0; 
     $total_sum_current_upload = 0; 
     foreach ($files_to_move as $file) {
@@ -180,7 +191,7 @@ function ppo_ajax_file_upload() {
         $total_sum_current_upload += $copies_val * $price_per_photo;
     }
     
-    // Ініціалізація сесії та перевірка мінімальної суми
+    // Ініціалізація сесії
     $_SESSION['ppo_order_id'] = $_SESSION['ppo_order_id'] ?? $order_id;
     $_SESSION['ppo_formats'] = $_SESSION['ppo_formats'] ?? []; 
     $_SESSION['ppo_total'] = $_SESSION['ppo_total'] ?? 0;
@@ -188,104 +199,116 @@ function ppo_ajax_file_upload() {
     $current_format_total_in_session = $_SESSION['ppo_formats'][$format]['total_price'] ?? 0;
     $new_format_total_sum = $current_format_total_in_session + $total_sum_current_upload;
 
+    // Перевірка мінімальної суми
     if ($total_sum_current_upload > 0 && $new_format_total_sum < MIN_ORDER_SUM) {
         $message = "Мінімальна сума замовлення для формату $format — " . MIN_ORDER_SUM . " грн. Ваша сума (з цими фото): " . round($new_format_total_sum, 0) . " грн. Додайте ще фото.";
         wp_send_json_error(['message' => $message], 400);
     }
     
     // ====================================================================
-    // ЛОГІКА ЗБЕРЕЖЕННЯ: GOOGLE DRIVE (Ініціалізація та Завантаження)
+    // 6. ЛОГІКА ЗБЕРЕЖЕННЯ: CDN Express (Ініціалізація та Завантаження)
     // ====================================================================
     try {
-        if (!class_exists('Google\Client')) {
-             throw new \Exception('Google API Client бібліотека недоступна. Встановіть через Composer.');
+        if (!class_exists('PPO_CDN_Express_Uploader')) {
+             throw new \Exception('CDN Uploader class is missing.');
         }
 
-        $uploader = new PPO_Google_Drive_Uploader(
-            PPO_GOOGLE_DRIVE_CLIENT_ID,
-            PPO_GOOGLE_DRIVE_CLIENT_SECRET,
-            PPO_GOOGLE_DRIVE_REFRESH_TOKEN,
-            PPO_GOOGLE_DRIVE_ROOT_FOLDER_ID
+        $uploader = new PPO_CDN_Express_Uploader(
+            PPO_CDN_HOST,
+            PPO_CDN_LOGIN,
+            PPO_CDN_PASSWORD,
+            PPO_CDN_ROOT_PATH
         );
     } catch (\Exception $e) {
-        error_log('Помилка ініціалізації Drive: ' . $e->getMessage());
-        wp_send_json_error(['message' => 'Помилка ініціалізації Drive: ' . $e->getMessage()], 500);
+        error_log('Помилка ініціалізації CDN: ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Помилка ініціалізації CDN: ' . $e->getMessage()], 500);
     }
 
-    $format_folder_id = null;
+    $format_folder_path = null;
     $all_upload_success = true;
+    $order_folder_name = 'Замовлення-' . $_SESSION['ppo_order_id'];
 
-    // Створення папки замовлення
-    $order_folder_id = $_SESSION['ppo_formats']['order_folder_id'] ?? null;
+    // 1. Створення папки замовлення 
+    $order_folder_path = $_SESSION['ppo_formats']['order_folder_path'] ?? null;
     try {
-        if (!$order_folder_id) {
-            $order_folder_id = $uploader->create_folder('Замовлення-' . $order_id);
-            $_SESSION['ppo_formats']['order_folder_id'] = $order_folder_id;
+        if (!$order_folder_path) {
+            $order_folder_path = $uploader->create_folder($order_folder_name, PPO_CDN_ROOT_PATH);
+            $_SESSION['ppo_formats']['order_folder_path'] = $order_folder_path;
         }
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Помилка створення папки замовлення на Drive: ' . $e->getMessage()], 500);
+        error_log('CDN Error (Order Folder): ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Помилка створення папки замовлення на CDN: ' . $e->getMessage()], 500);
     }
     
-    // Створення папки формату та завантаження файлів
+    // 2. Створення папки формату
     try {
-        $format_folder_id = $uploader->create_folder($format, $order_folder_id);
+        $format_folder_path = $uploader->create_folder($format, $order_folder_path);
     } catch (\Exception $e) {
-        wp_send_json_error(['message' => 'Помилка створення папки формату на Drive: ' . $e->getMessage()], 500);
+        error_log('CDN Error (Format Folder): ' . $e->getMessage());
+        wp_send_json_error(['message' => 'Помилка створення папки формату на CDN: ' . $e->getMessage()], 500);
     }
     
+    // 3. Створення папок копій та завантаження файлів
     $uploaded_files = [];
     foreach ($files_to_move as $file) {
         $copies_val = $file['copies_count'];
         $copies_folder_name = $copies_val . ' копій';
         
         try {
-            $copies_folder_id = $uploader->create_folder($copies_folder_name, $format_folder_id);
+            // Створення папки для копій
+            $copies_folder_path = $uploader->create_folder($copies_folder_name, $format_folder_path);
 
+            // Завантаження файлу
             $uploaded_file_info = $uploader->upload_file(
                 $file['tmp_name'], 
                 $file['name'], 
-                $copies_folder_id
+                $copies_folder_path
             );
 
             $uploaded_files[] = [
                 'name' => $file['name'],
                 'copies' => $copies_val,
-                'drive_id' => $uploaded_file_info->id,
-                'drive_link' => $uploaded_file_info->webViewLink,
-                'drive_folder_id' => $copies_folder_id,
+                'cdn_path' => $uploaded_file_info->path, // Шлях у сховищі
+                'cdn_link' => $uploaded_file_info->webViewLink, // Пряме посилання
+                'cdn_folder_path' => $copies_folder_path,
             ];
             
         } catch (\Exception $e) {
             $all_upload_success = false;
-            error_log('Помилка завантаження файлу ' . $file['name'] . ' на Drive: ' . $e->getMessage());
+            error_log('CDN Error (Upload File ' . $file['name'] . '): ' . $e->getMessage());
+            // Продовжуємо спроби з іншими файлами, але фіксуємо помилку
         }
     }
     
-    // 4. Збереження/оновлення в сесії та фінальний результат
-    if (isset($_SESSION['ppo_formats'][$format]) && is_array($_SESSION['ppo_formats'][$format])) {
-        $_SESSION['ppo_formats'][$format]['total_copies'] += $photo_count;
-        $_SESSION['ppo_formats'][$format]['total_price'] += $total_sum_current_upload;
-        $_SESSION['ppo_formats'][$format]['files'] = array_merge(
-            $_SESSION['ppo_formats'][$format]['files'] ?? [], 
-            $uploaded_files
-        );
-    } else {
-        $_SESSION['ppo_formats'][$format] = [
-            'total_copies' => $photo_count,
-            'total_price' => $total_sum_current_upload,
-            'drive_folder_id' => $format_folder_id,
-            'files' => $uploaded_files,
-        ];
+    // 4. Збереження/оновлення в сесії 
+    if ($total_sum_current_upload > 0 && !empty($uploaded_files)) {
+        if (isset($_SESSION['ppo_formats'][$format]) && is_array($_SESSION['ppo_formats'][$format])) {
+            $_SESSION['ppo_formats'][$format]['total_copies'] += $photo_count;
+            $_SESSION['ppo_formats'][$format]['total_price'] += $total_sum_current_upload;
+            $_SESSION['ppo_formats'][$format]['files'] = array_merge(
+                $_SESSION['ppo_formats'][$format]['files'] ?? [], 
+                $uploaded_files
+            );
+        } else {
+            $_SESSION['ppo_formats'][$format] = [
+                'total_copies' => $photo_count,
+                'total_price' => $total_sum_current_upload,
+                'cdn_folder_path' => $format_folder_path, 
+                'files' => $uploaded_files,
+            ];
+        }
+        
+        $_SESSION['ppo_total'] += $total_sum_current_upload;
     }
     
-    $_SESSION['ppo_total'] += $total_sum_current_upload;
-    
-    if (!$all_upload_success && $total_sum_current_upload == 0) {
-        wp_send_json_error(['message' => 'Жоден файл не був успішно завантажений на Google Drive. Перевірте логи.'], 500);
+    if (!$all_upload_success && empty($uploaded_files)) {
+        // Якщо жоден файл не завантажено
+        wp_send_json_error(['message' => 'Критична помилка. Жоден файл не був успішно завантажений на CDN. Перевірте логи.'], 500);
     }
     
+    // Відповідь для клієнта
     wp_send_json_success([
-        'message' => 'Замовлення збережено на Google Drive! Додайте ще фото або оформіть доставку.',
+        'message' => 'Замовлення збережено на CDN! Додайте ще фото або оформіть доставку.',
         'formats' => array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'),
         'total' => $_SESSION['ppo_total'],
     ]);
@@ -349,7 +372,7 @@ function ppo_handle_payment_submission() {
     }
     
     $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
-    $order_folder_id = $_SESSION['ppo_formats']['order_folder_id'] ?? null;
+    $order_folder_path = $_SESSION['ppo_formats']['order_folder_path'] ?? null; 
     
     if (!isset($_SESSION['ppo_order_id']) || empty($session_formats) || empty($_SESSION['ppo_delivery_address'])) {
         wp_safe_redirect(add_query_arg('error', urlencode('Неповні дані для замовлення.'), home_url('/order/')));
@@ -374,9 +397,9 @@ function ppo_handle_payment_submission() {
     update_post_meta($order_id, 'ppo_address', $_SESSION['ppo_delivery_address']);
     update_post_meta($order_id, 'ppo_payment_method', sanitize_text_field($_POST['payment_method'] ?? 'card'));
     
-    // Збереження ID папки Drive
-    if ($order_folder_id) {
-         update_post_meta($order_id, 'ppo_drive_folder_id', $order_folder_id);
+    // Збереження шляху CDN (використовуємо новий, чіткий ключ)
+    if ($order_folder_path) {
+         update_post_meta($order_id, 'ppo_cdn_folder_path', $order_folder_path); 
     }
 
     // Очищення сесії після успішного збереження
@@ -389,6 +412,7 @@ function ppo_handle_payment_submission() {
 
 // ====================================================================
 // 8. ФУНКЦІЇ РЕНДЕРУ ШОРТКОДІВ
+// (Без змін у логіці відображення)
 // ====================================================================
 function ppo_render_order_form() {
     ob_start();
@@ -522,16 +546,25 @@ function ppo_render_order_form() {
         $total_copies_overall = 0;
         $session_total_display = $_SESSION['ppo_total'] ?? 0;
         if ($has_order) {
-            $total_copies_overall = array_sum(array_column($session_formats, 'total_copies'));
+            // Фільтруємо системні ключі, такі як order_folder_path
+            $display_formats = array_filter($session_formats, 'is_array');
+            $total_copies_overall = array_sum(array_column($display_formats, 'total_copies'));
         }
         ?>
         <div id="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
             <h3>Додані формати:</h3>
             <ul id="ppo-formats-list">
                 <?php if ($has_order): ?>
-                    <?php foreach ($session_formats as $format => $details): ?>
-                        <li><?php echo esc_html($format . ': ' . $details['total_copies'] . ' копій, ' . $details['total_price'] . ' грн'); ?></li>
-                    <?php endforeach; ?>
+                    <?php 
+                    // Відображаємо лише формати, ігноруючи технічні ключі
+                    foreach ($session_formats as $key => $details): 
+                        if (is_array($details)):
+                    ?>
+                        <li><?php echo esc_html($key . ': ' . $details['total_copies'] . ' копій, ' . $details['total_price'] . ' грн'); ?></li>
+                    <?php 
+                        endif; 
+                    endforeach; 
+                    ?>
                 <?php endif; ?>
             </ul>
             <p class="ppo-total-sum">
@@ -587,6 +620,8 @@ function ppo_render_payment_form() {
     
     ob_start();
     $total = $_SESSION['ppo_total'] ?? 0;
+    
+    // Фільтруємо, щоб показувати лише реальні формати, а не order_folder_path
     $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
     
     if (isset($_GET['success']) && $_GET['success'] === 'order_completed'): ?>

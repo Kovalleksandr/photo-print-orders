@@ -97,7 +97,7 @@ jQuery(document).ready(function($) {
         $quantitiesContainer.empty();
         
         if (fileList.length === 0) {
-            $quantitiesContainer.html('<p style="text-align: center; color: #666;">Не вибрано жодного файлу.</p>');
+            $quantitiesContainer.html('<p style="text-align: center; color: #667;">Не вибрано жодного файлу.</p>');
             return;
         }
 
@@ -204,6 +204,9 @@ jQuery(document).ready(function($) {
         const selectedFormat = $formatSelect.val();
         const files = this.files;
 
+        // Отримання динамічного значення з об'єкта
+        const maxFilesPerUpload = ppo_ajax_object.max_files; 
+
         clearMessages();
 
         if (!selectedFormat) {
@@ -211,8 +214,8 @@ jQuery(document).ready(function($) {
             this.value = null; // Очищуємо поле
             return;
         }
-        if (files.length > 20) {
-            displayMessage('Максимум 20 файлів дозволено за одне завантаження.', 'error');
+        if (files.length > maxFilesPerUpload) { 
+            displayMessage('Максимум ' + maxFilesPerUpload + ' файлів дозволено за одне завантаження.', 'error');
             this.value = null; 
             return;
         }
