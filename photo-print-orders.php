@@ -703,8 +703,12 @@ function ppo_render_order_form() {
                 Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
             </p>
 
-            <p class="ppo-total-sum">Сума поточного завантаження: <span id="current-upload-sum">0</span> грн</p>
-            <p class="ppo-total-sum">Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)</p>
+            <p class="ppo-total-sum" id="current-upload-summary-single" style="display: none;">
+                Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
+            </p>
+            <p class="ppo-total-sum" id="current-upload-summary-total" style="display: none;">
+                Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
+            </p>
         </div>
 
         <div style="display: flex; align-items: center;">
