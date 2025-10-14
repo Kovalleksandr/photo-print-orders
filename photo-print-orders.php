@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Photo Print Orders
  * Description: Плагін для замовлення друку фото з завантаженням файлів у CDN Express.
- * Version: 4.1 (Фіналізація CDN інтеграції)
+ * Version: 4.2 (Інтеграція унікального номера замовлення ДДММРРNNN)
  * Author: Помічник із програмування
  */
 
@@ -24,6 +24,41 @@ if (!defined('PPO_CDN_HOST') || !defined('PPO_CDN_LOGIN') || !defined('PPO_CDN_P
         echo '<div class="notice notice-error"><p>Помилка Photo Print Orders: Не визначено CDN облікові дані. Перевірте ppo-config.php.</p></div>';
     });
     return; // Зупиняємо виконання плагіна, якщо конфігурація неповна
+}
+
+// ====================================================================
+// НОВА ФУНКЦІЯ: ГЕНЕРАЦІЯ НОМЕРА (ДДММРРNNN)
+// ====================================================================
+/**
+ * Генерує новий номер замовлення у форматі ДДММРРNNN.
+ * Зберігає та оновлює порядковий номер на поточну дату в опціях WordPress.
+ *
+ * @return string Новий 9-значний номер замовлення.
+ */
+function ppo_generate_order_number() {
+    $date_part = date('dmy'); // ДДММРР
+    $option_name = 'ppo_daily_order_counter_' . $date_part;
+
+    // 1. Отримати поточний лічильник
+    $current_count = get_option($option_name, 0); 
+    
+    // 2. Збільшити лічильник
+    $new_count = $current_count + 1;
+
+    // 3. Зберегти оновлений лічильник у базу даних
+    if ($current_count === 0) {
+        add_option($option_name, $new_count, '', 'no');
+    } else {
+        update_option($option_name, $new_count);
+    }
+    
+    // 4. Форматування порядкового номера (001, 002... 999)
+    $counter_part = str_pad($new_count, 3, '0', STR_PAD_LEFT);
+
+    // 5. Повний номер
+    $order_number = $date_part . $counter_part;
+
+    return $order_number;
 }
 
 
@@ -62,19 +97,26 @@ function ppo_register_order_post_type() {
         ],
         'public' => false,
         'show_ui' => true,
-        'supports' => ['title'],
+        // Title буде оновлюватися на номер замовлення
+        'supports' => ['title'], 
         'menu_icon' => 'dashicons-format-gallery',
     ]);
 }
 add_filter('manage_photo_order_posts_columns', function($columns) {
-    $columns['details'] = 'Деталі замовлення';
-    $columns['cdn_path'] = 'CDN Шлях';
+    // Додаємо нову колонку для номера
+    $new_columns = [];
+    $new_columns['cb'] = $columns['cb'];
+    $new_columns['title'] = 'Номер Замовлення'; // Перейменовуємо стандартний Title
+    $new_columns['details'] = 'Деталі замовлення';
+    $new_columns['cdn_path'] = 'CDN Шлях';
     unset($columns['date']);
-    return $columns;
+    unset($columns['title']);
+    return array_merge($new_columns, $columns);
 });
 add_action('manage_photo_order_posts_custom_column', function($column, $post_id) {
     switch ($column) {
         case 'details':
+            // Отримуємо метадані
             $formats = get_post_meta($post_id, 'ppo_formats', true);
             $total = get_post_meta($post_id, 'ppo_total', true);
             $address = get_post_meta($post_id, 'ppo_address', true);
@@ -82,9 +124,10 @@ add_action('manage_photo_order_posts_custom_column', function($column, $post_id)
             if ($formats) {
                 echo '<strong>Формати:</strong><br>';
                 foreach ($formats as $format => $details) {
-                     if (is_array($details) && isset($details['total_copies'])) {
-                         echo esc_html("$format: {$details['total_copies']} копій, {$details['total_price']} грн<br>");
-                     }
+                    // Фільтруємо технічний ключ 'order_folder_path'
+                    if (is_array($details) && isset($details['total_copies'])) {
+                        echo esc_html("$format: {$details['total_copies']} копій, {$details['total_price']} грн<br>");
+                    }
                 }
             }
             if ($total) {
@@ -96,16 +139,127 @@ add_action('manage_photo_order_posts_custom_column', function($column, $post_id)
             break;
         case 'cdn_path':
             $cdn_path = get_post_meta($post_id, 'ppo_cdn_folder_path', true); 
+            // ОНОВЛЕНО: Формування URL відповідно до шаблону https://print.cdn.express/~/o/141025002
+            // Припускаємо, що PPO_CDN_HOST — це "print.cdn.express", а $cdn_path — це "/141025002"
             if ($cdn_path) {
-                // Створюємо посилання для зручності, припускаючи, що сховище доступне для перегляду
-                $full_url = 'https://' . PPO_CDN_HOST . $cdn_path;
-                 echo '<a href="' . esc_url($full_url) . '" target="_blank">' . esc_html($cdn_path) . '</a>';
+                // Видаляємо скісну риску на початку, якщо вона є
+                $clean_cdn_path = ltrim($cdn_path, '/'); 
+                // Створюємо посилання: https://print.cdn.express/~/o/НОМЕР_ЗАМОВЛЕННЯ
+                $full_url = 'https://' . PPO_CDN_HOST . '/~/o/' . esc_attr($clean_cdn_path); 
+                echo '<a href="' . esc_url($full_url) . '" target="_blank">' . esc_html($cdn_path) . '</a>';
             } else {
-                 echo 'N/A';
+                echo 'N/A';
             }
             break;
     }
 }, 10, 2);
+
+
+// ====================================================================
+// 3.5. АДМІНКА: МЕТАБОКС ДЛЯ ДЕТАЛЕЙ ЗАМОВЛЕННЯ (Оновлено стилі таблиці)
+// ====================================================================
+add_action('add_meta_boxes', 'ppo_add_order_details_metabox');
+function ppo_add_order_details_metabox() {
+    add_meta_box(
+        'ppo_order_details_metabox',
+        'Деталі Замовлення та CDN',
+        'ppo_render_order_details_metabox',
+        'photo_order',
+        'normal',
+        'high'
+    );
+}
+
+function ppo_render_order_details_metabox($post) {
+    // 1. Отримання всіх збережених метаданих (без змін)
+    $order_number = get_post_meta($post->ID, 'ppo_order_number', true);
+    // ... (решта змінних метаданих) ...
+    $cdn_folder_path = get_post_meta($post->ID, 'ppo_cdn_folder_path', true);
+    $formats_data = get_post_meta($post->ID, 'ppo_formats', true);
+    
+    // Формування посилання CDN (без змін)
+    $cdn_link = 'N/A';
+    // ...
+    // ... (код формування $cdn_link) ...
+    $payment_label = $payment_method === 'card' ? 'Оплата карткою (LiqPay/інший)' : 'Оплата за реквізитами';
+
+    ?>
+    <style>
+        .ppo-details-table th, .ppo-details-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .ppo-details-table th {
+            width: 30%; /* Залишаємо для загальної таблиці */
+            background-color: #f7f7f7;
+        }
+        .ppo-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        /* НОВІ СТИЛІ: Для деталізації по форматах та файлах */
+        #ppo_formats_table th.col-format { width: 15%; }
+        #ppo_formats_table th.col-copies { width: 15%; }
+        #ppo_formats_table th.col-price { width: 15%; }
+        #ppo_formats_table th.col-details { width: 55%; }
+        /* Кінець нових стилів */
+
+        .ppo-formats-list {
+            list-style: disc;
+            margin-left: 20px;
+        }
+    </style>
+    
+    <h3>Загальна інформація про замовлення</h3>
+    <table class="ppo-details-table">
+        </table>
+    
+    <h3>Деталізація по форматах та файлах</h3>
+    <?php if (!empty($formats_data) && is_array($formats_data)): ?>
+        <table class="ppo-details-table" id="ppo_formats_table">
+            <thead>
+                <tr>
+                    <th class="col-format">Формат</th>
+                    <th class="col-copies">Всього Копій</th>
+                    <th class="col-price">Сума за Формат</th>
+                    <th class="col-details">Деталі Файлів</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                // Фільтруємо, щоб показати лише формати, ігноруючи order_folder_path
+                foreach (array_filter($formats_data, 'is_array') as $format => $details): 
+                ?>
+                    <tr>
+                        <td><strong><?php echo esc_html($format); ?></strong></td>
+                        <td><?php echo esc_html($details['total_copies']); ?></td>
+                        <td><?php echo esc_html($details['total_price']); ?> грн</td>
+                        <td>
+                            <?php if (!empty($details['files']) && is_array($details['files'])): ?>
+                                <ul class="ppo-formats-list">
+                                    <?php foreach ($details['files'] as $file): ?>
+                                        <li>
+                                            **<?php echo esc_html($file['name']); ?>** (<?php echo esc_html($file['copies']); ?> копій). 
+                                            <small>Шлях: <?php echo esc_html($file['cdn_folder_path']); ?></small>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                Немає даних про файли.
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <p>Деталі форматів відсутні.</p>
+    <?php endif;
+}
+
+
 
 // ====================================================================
 // 4. РЕЄСТРАЦІЯ ШОРТКОДІВ ТА СКРИПТІВ
@@ -116,10 +270,12 @@ add_shortcode('photo_print_payment_form', 'ppo_render_payment_form');
 
 add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 function ppo_enqueue_scripts() {
-    wp_register_script('ppo-ajax-script', plugin_dir_url(__FILE__) . 'ppo-ajax-script.js', ['jquery'], '4.1', true);
+    wp_register_script('ppo-ajax-script', plugin_dir_url(__FILE__) . 'ppo-ajax-script.js', ['jquery'], '4.2', true);
     wp_enqueue_script('ppo-ajax-script');
 
-    $session_total = array_sum(array_column(array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'), 'total_price'));
+    // Фільтруємо системні ключі перед передачею в JS
+    $session_formats_filtered = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
+    $session_total = array_sum(array_column($session_formats_filtered, 'total_price'));
     
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
         'ajax_url' => admin_url('admin-ajax.php'),
@@ -127,7 +283,7 @@ function ppo_enqueue_scripts() {
         'max_files' => MAX_FILES_PER_UPLOAD,
         'min_sum'  => MIN_ORDER_SUM,
         'prices'   => PHOTO_PRICES,
-        'session_formats' => array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'),
+        'session_formats' => $session_formats_filtered,
         'session_total' => $session_total,
         'redirect_delivery' => home_url('/orderpagedelivery/'),
         'redirect_error' => PPO_ERROR_URL,
@@ -147,28 +303,27 @@ function ppo_ajax_file_upload() {
     }
 
     $format = sanitize_text_field($_POST['format']);
-    $order_id = sanitize_text_field($_POST['order_id']);
+    // $order_id = sanitize_text_field($_POST['order_id']); // ВИДАЛЕНО: order_id генерується нижче
     $copies_json = stripslashes($_POST['copies']);
     $copies = json_decode($copies_json, true) ?? [];
     $files = $_FILES['photos'];
     $price_per_photo = PHOTO_PRICES[$format] ?? 0;
 
-    // --- Фільтрація та перевірка файлів ---
+    // --- Фільтрація та перевірка файлів (логіка не змінена) ---
     $files_to_move = [];
     $valid_file_index = 0;
     foreach ($files['name'] as $key => $filename) {
          if ($files['error'][$key] !== UPLOAD_ERR_OK || empty($files['tmp_name'][$key])) {
-              continue; 
+             continue; 
          }
          if (!in_array($files['type'][$key], ALLOWED_MIME_TYPES)) {
              wp_send_json_error(['message' => 'Дозволені лише JPEG або PNG файли.'], 400);
          }
-         // Визначаємо кількість копій
          $copies_count = isset($copies[$valid_file_index]) ? intval($copies[$valid_file_index]) : 1;
          $copies_count = max(1, $copies_count); 
          
          $files_to_move[] = [
-             'name' => sanitize_file_name($filename), // Очищення імені файлу
+             'name' => sanitize_file_name($filename),
              'tmp_name' => $files['tmp_name'][$key],
              'copies_count' => $copies_count, 
          ];
@@ -191,8 +346,16 @@ function ppo_ajax_file_upload() {
         $total_sum_current_upload += $copies_val * $price_per_photo;
     }
     
-    // Ініціалізація сесії
-    $_SESSION['ppo_order_id'] = $_SESSION['ppo_order_id'] ?? $order_id;
+    // ====================================================================
+    // ОНОВЛЕННЯ 1: ГЕНЕРАЦІЯ НОМЕРА ЗАМОВЛЕННЯ
+    // ====================================================================
+    if (!isset($_SESSION['ppo_order_id'])) {
+        // Якщо це перше завантаження у сесії, генеруємо новий номер
+        $_SESSION['ppo_order_id'] = ppo_generate_order_number(); 
+    }
+    $current_order_id = $_SESSION['ppo_order_id'];
+    
+    // Ініціалізація інших сесійних змінних
     $_SESSION['ppo_formats'] = $_SESSION['ppo_formats'] ?? []; 
     $_SESSION['ppo_total'] = $_SESSION['ppo_total'] ?? 0;
 
@@ -226,14 +389,17 @@ function ppo_ajax_file_upload() {
 
     $format_folder_path = null;
     $all_upload_success = true;
-    $order_folder_name = 'Замовлення-' . $_SESSION['ppo_order_id'];
+    
+    // ОНОВЛЕННЯ 2: Використовуємо згенерований $current_order_id для назви папки
+    $order_folder_name = $current_order_id;  
 
     // 1. Створення папки замовлення 
     $order_folder_path = $_SESSION['ppo_formats']['order_folder_path'] ?? null;
     try {
         if (!$order_folder_path) {
             $order_folder_path = $uploader->create_folder($order_folder_name, PPO_CDN_ROOT_PATH);
-            $_SESSION['ppo_formats']['order_folder_path'] = $order_folder_path;
+            // Зберігаємо шлях у сесії
+            $_SESSION['ppo_formats']['order_folder_path'] = $order_folder_path; 
         }
     } catch (\Exception $e) {
         error_log('CDN Error (Order Folder): ' . $e->getMessage());
@@ -252,7 +418,7 @@ function ppo_ajax_file_upload() {
     $uploaded_files = [];
     foreach ($files_to_move as $file) {
         $copies_val = $file['copies_count'];
-        $copies_folder_name = $copies_val . ' копій';
+        $copies_folder_name = $copies_val;
         
         try {
             // Створення папки для копій
@@ -308,7 +474,7 @@ function ppo_ajax_file_upload() {
     
     // Відповідь для клієнта
     wp_send_json_success([
-        'message' => 'Замовлення збережено на CDN! Додайте ще фото або оформіть доставку.',
+        'message' => 'Замовлення ' . $current_order_id . ' збережено на CDN! Додайте ще фото або оформіть доставку.',
         'formats' => array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'),
         'total' => $_SESSION['ppo_total'],
     ]);
@@ -372,19 +538,25 @@ function ppo_handle_payment_submission() {
     }
     
     $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
-    $order_folder_path = $_SESSION['ppo_formats']['order_folder_path'] ?? null; 
     
-    if (!isset($_SESSION['ppo_order_id']) || empty($session_formats) || empty($_SESSION['ppo_delivery_address'])) {
+    // ОНОВЛЕННЯ 3: Отримуємо номер та шлях CDN з сесії
+    $order_number = $_SESSION['ppo_order_id'] ?? null; 
+    $cdn_folder_path = $_SESSION['ppo_formats']['order_folder_path'] ?? null; 
+    
+    if (empty($order_number) || empty($session_formats) || empty($_SESSION['ppo_delivery_address'])) {
         wp_safe_redirect(add_query_arg('error', urlencode('Неповні дані для замовлення.'), home_url('/order/')));
         exit;
     }
 
     // Створення посту замовлення
-    $order_id = wp_insert_post([
+    $post_args = [
         'post_type' => 'photo_order',
-        'post_title' => 'Замовлення ' . $_SESSION['ppo_order_id'],
-        'post_status' => 'publish',
-    ]);
+        // ОНОВЛЕННЯ 4: Використовуємо номер як заголовок (буде видно в адмінці)
+        'post_title' => 'Замовлення №' . $order_number, 
+        'post_status' => 'pending', // Змінено на pending для ручної обробки
+    ];
+    
+    $order_id = wp_insert_post($post_args);
 
     if (is_wp_error($order_id)) {
         wp_safe_redirect(add_query_arg('error', urlencode('Помилка створення замовлення.'), $referer_url));
@@ -397,9 +569,12 @@ function ppo_handle_payment_submission() {
     update_post_meta($order_id, 'ppo_address', $_SESSION['ppo_delivery_address']);
     update_post_meta($order_id, 'ppo_payment_method', sanitize_text_field($_POST['payment_method'] ?? 'card'));
     
-    // Збереження шляху CDN (використовуємо новий, чіткий ключ)
-    if ($order_folder_path) {
-         update_post_meta($order_id, 'ppo_cdn_folder_path', $order_folder_path); 
+    // ОНОВЛЕННЯ 5: Зберігаємо сам номер та шлях CDN
+    if ($order_number) {
+        update_post_meta($order_id, 'ppo_order_number', $order_number);
+    }
+    if ($cdn_folder_path) {
+        update_post_meta($order_id, 'ppo_cdn_folder_path', $cdn_folder_path); 
     }
 
     // Очищення сесії після успішного збереження
@@ -410,13 +585,14 @@ function ppo_handle_payment_submission() {
     exit;
 }
 
+
 // ====================================================================
 // 8. ФУНКЦІЇ РЕНДЕРУ ШОРТКОДІВ
-// (Без змін у логіці відображення)
 // ====================================================================
 function ppo_render_order_form() {
     ob_start();
-    $order_id = isset($_SESSION['ppo_order_id']) ? $_SESSION['ppo_order_id'] : 'ORDER-' . wp_generate_uuid4();
+    // ОНОВЛЕННЯ 6: order_id відображаємо як placeholder, оскільки він генерується на сервері
+    $order_id = isset($_SESSION['ppo_order_id']) ? $_SESSION['ppo_order_id'] : 'Буде згенеровано при завантаженні...';
     $min_order_sum = MIN_ORDER_SUM;
     $photo_prices = PHOTO_PRICES;
     
@@ -531,7 +707,6 @@ function ppo_render_order_form() {
             <p class="ppo-total-sum">Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)</p>
         </div>
 
-        <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>" id="order_id_input">
         <div style="display: flex; align-items: center;">
             <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
             <div id="ppo-loader" class="ppo-loader"></div>
@@ -558,7 +733,7 @@ function ppo_render_order_form() {
                     <?php 
                     // Відображаємо лише формати, ігноруючи технічні ключі
                     foreach ($session_formats as $key => $details): 
-                        if (is_array($details)):
+                         if (is_array($details)):
                     ?>
                         <li><?php echo esc_html($key . ': ' . $details['total_copies'] . ' копій, ' . $details['total_price'] . ' грн'); ?></li>
                     <?php 
@@ -595,7 +770,7 @@ function ppo_render_delivery_form() {
     ?>
     <div class="ppo-delivery-form-container">
         <h2>Крок 2: Оформлення доставки</h2>
-        <p>Ваше замовлення на суму **<?php echo esc_html($_SESSION['ppo_total'] ?? 0); ?> грн** готове. Вкажіть адресу доставки.</p>
+        <p>Ваше замовлення **№<?php echo esc_html($_SESSION['ppo_order_id']); ?>** на суму **<?php echo esc_html($_SESSION['ppo_total'] ?? 0); ?> грн** готове. Вкажіть адресу доставки.</p>
         
         <form method="post">
             <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
@@ -627,13 +802,13 @@ function ppo_render_payment_form() {
     if (isset($_GET['success']) && $_GET['success'] === 'order_completed'): ?>
         <div class="ppo-message ppo-message-success">
             <h2>🎉 Замовлення успішно оформлено!</h2>
-            <p>Ваше замовлення (**<?php echo esc_html($_SESSION['ppo_order_id'] ?? 'N/A'); ?>**) прийнято в обробку. Загальна сума: **<?php echo esc_html($total); ?> грн**.</p>
+            <p>Ваше замовлення (**№<?php echo esc_html($_SESSION['ppo_order_id'] ?? 'N/A'); ?>**) прийнято в обробку. Загальна сума: **<?php echo esc_html($total); ?> грн**.</p>
             <p>Наші менеджери зв'яжуться з вами для уточнення деталей оплати та відправлення.</p>
         </div>
         <p><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-primary">Створити нове замовлення</a></p>
     <?php else: ?>
         <h2>Крок 3: Оплата та підтвердження</h2>
-        <p>Ваше замовлення:</p>
+        <p>Ваше замовлення **№<?php echo esc_html($_SESSION['ppo_order_id']); ?>**:</p>
         <ul>
             <?php foreach ($session_formats as $format => $details): ?>
                 <li>**<?php echo esc_html($format); ?>**: <?php echo esc_html($details['total_copies']); ?> копій (<?php echo esc_html($details['total_price']); ?> грн)</li>

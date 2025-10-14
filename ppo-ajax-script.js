@@ -6,6 +6,7 @@ jQuery(document).ready(function($) {
     const minSum = ppo_ajax_object.min_sum;
     const prices = ppo_ajax_object.prices;
     const redirectDelivery = ppo_ajax_object.redirect_delivery;
+    const maxFilesPerUpload = ppo_ajax_object.max_files; // <--- Використовуємо динамічне значення
 
     // Зберігаємо формати та загальну суму в JS для швидкого оновлення інтерфейсу
     let sessionFormats = ppo_ajax_object.session_formats;
@@ -73,20 +74,16 @@ jQuery(document).ready(function($) {
         $formatTotalSum.text(totalSumForFormat.toFixed(0));
 
         // Перевірка мінімальної суми та керування кнопкою
+        const shouldEnableButton = currentUploadTotalCopies > 0 && totalSumForFormat >= minSum;
+
         if (totalSumForFormat < minSum) {
             $sumWarning.show();
-            $submitButton.prop('disabled', true);
         } else {
             $sumWarning.hide();
-            $submitButton.prop('disabled', false);
         }
 
         // Керування кнопкою
-        if (currentUploadTotalCopies === 0) {
-            $submitButton.prop('disabled', true);
-        } else if (totalSumForFormat >= minSum) {
-             $submitButton.prop('disabled', false);
-        }
+        $submitButton.prop('disabled', !shouldEnableButton);
     }
 
     /**
@@ -107,13 +104,13 @@ jQuery(document).ready(function($) {
             // Контейнер для мініатюри (якщо можливо)
             const $thumbContainer = $('<div class="photo-thumbnail-container">');
             if (file.type.startsWith('image/')) {
-                 const reader = new FileReader();
-                 reader.onload = function(e) {
-                      $thumbContainer.html('<img src="' + e.target.result + '" alt="Мініатюра">');
-                 };
-                 reader.readAsDataURL(file);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $thumbContainer.html('<img src="' + e.target.result + '" alt="Мініатюра">');
+                };
+                reader.readAsDataURL(file);
             } else {
-                 $thumbContainer.text('📄'); // Іконка за замовчуванням
+                $thumbContainer.text('📄'); // Іконка за замовчуванням
             }
             $item.append($thumbContainer);
 
@@ -126,14 +123,14 @@ jQuery(document).ready(function($) {
             const $input = $('<input>')
                 .attr({
                     type: 'number',
-                    name: 'copies[]',
+                    name: 'copies_count_input[]', // Змінено на унікальне ім'я, оскільки ми збираємо дані вручну
                     id: 'copies_' + i,
                     value: 1,
                     min: 1
                 })
                 .on('input change', updateCurrentUploadSummary);
             
-            // Кнопка видалення (видаляє файл з fileList, перерендерить)
+            // Кнопка видалення
             const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
                 .data('file-index', i)
                 .on('click', function() {
@@ -176,8 +173,9 @@ jQuery(document).ready(function($) {
         
         let totalCopiesOverall = 0;
 
+        // Фільтруємо системні ключі (наприклад, order_folder_path)
         for (const format in sessionFormats) {
-            if (format === 'order_folder_id' || !sessionFormats.hasOwnProperty(format)) continue;
+            if (format.includes('folder_path') || !sessionFormats.hasOwnProperty(format) || typeof sessionFormats[format] !== 'object') continue;
             
             const details = sessionFormats[format];
             const $listItem = $('<li>')
@@ -187,7 +185,13 @@ jQuery(document).ready(function($) {
         }
 
         $('#ppo-session-total').html(`${sessionTotal.toFixed(0)} грн <small>(Всього копій: ${totalCopiesOverall})</small>`);
-        $('#ppo-formats-list-container').show();
+        
+        // Показуємо/ховаємо контейнер підсумків
+        if (totalCopiesOverall > 0) {
+             $('#ppo-formats-list-container').show();
+        } else {
+             $('#ppo-formats-list-container').hide();
+        }
     }
     
     // --- Обробники подій ---
@@ -203,9 +207,6 @@ jQuery(document).ready(function($) {
     $photosInput.on('change', function() {
         const selectedFormat = $formatSelect.val();
         const files = this.files;
-
-        // Отримання динамічного значення з об'єкта
-        const maxFilesPerUpload = ppo_ajax_object.max_files; 
 
         clearMessages();
 
@@ -226,14 +227,16 @@ jQuery(document).ready(function($) {
     
     // 3. Обробка натискання кнопки "Очистити"
     $clearFormButton.on('click', function(e) {
-         e.preventDefault();
-         $photosInput.val(''); // Очистити поле вибору файлів
-         $formatSelect.val(''); // Очистити вибір формату
-         $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
-         $sumWarning.hide();
-         $submitButton.prop('disabled', true);
-         updateCurrentUploadSummary();
-         clearMessages();
+        e.preventDefault();
+        $photosInput.val(''); // Очистити поле вибору файлів
+        $formatSelect.val(''); // Очистити вибір формату
+        $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
+        $sumWarning.hide();
+        $submitButton.prop('disabled', true);
+        // Не викликаємо updateCurrentUploadSummary(), оскільки там буде помилка, якщо formatSelect порожній
+        $currentUploadSum.text('0');
+        $formatTotalSum.text('0');
+        clearMessages();
     });
 
 
@@ -243,8 +246,8 @@ jQuery(document).ready(function($) {
 
         const selectedFormat = $formatSelect.val();
         if (!$photosInput[0].files.length) {
-             displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
-             return;
+            displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
+            return;
         }
 
         $loader.show();
@@ -252,20 +255,26 @@ jQuery(document).ready(function($) {
         clearMessages();
 
         // Збираємо дані форми
-        const formData = new FormData(this);
+        const formData = new FormData();
+        // Додаємо лише необхідні поля
         formData.append('action', 'ppo_file_upload');
         formData.append('ppo_ajax_nonce', nonce);
+        formData.append('format', selectedFormat);
         
-        // Збираємо копії окремим масивом (важливо для коректної передачі)
+        // Додаємо файли (важливо робити це окремо)
+        for (let i = 0; i < $photosInput[0].files.length; i++) {
+             formData.append('photos[]', $photosInput[0].files[i]);
+        }
+        
+        // Збираємо копії окремим масивом
         const copiesArray = [];
         $quantitiesContainer.find('input[type="number"]').each(function() {
-             copiesArray.push($(this).val());
+            copiesArray.push($(this).val());
         });
         // Передаємо JSON-рядок копій
         formData.append('copies', JSON.stringify(copiesArray)); 
         
-        // Видаляємо дублююче поле name='copies[]'
-        formData.delete('copies[]');
+        // *** ПІДТРИМКА НОВОЇ ЛОГІКИ: order_id НЕ ПЕРЕДАЄМО, його генерує бекенд ***
         
         $.ajax({
             url: ajaxUrl,
@@ -292,12 +301,16 @@ jQuery(document).ready(function($) {
                     displayMessage(response.data.message, 'error');
                     $submitButton.prop('disabled', false); // Повертаємо можливість відправки
                 }
+                
+                // Очищаємо підсумок поточного завантаження після успіху/помилки
+                $currentUploadSum.text('0');
+                $formatTotalSum.text('0');
             },
             error: function(xhr, status, error) {
                 $loader.hide();
                 const errorMessage = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message 
-                                   ? xhr.responseJSON.data.message 
-                                   : 'Помилка завантаження. Перевірте консоль.';
+                                       ? xhr.responseJSON.data.message 
+                                       : 'Помилка завантаження. Перевірте консоль.';
                 displayMessage(errorMessage, 'error');
                 $submitButton.prop('disabled', false);
             }
@@ -306,6 +319,5 @@ jQuery(document).ready(function($) {
 
     // 5. Ініціалізація: оновлення підсумкової суми при завантаженні сторінки
     updateSummaryList();
-    updateCurrentUploadSummary(); // На випадок, якщо потрібен рендер на старті
-
+    // updateCurrentUploadSummary(); // Вимкнено, щоб уникнути помилок, якщо формат не вибрано
 });
