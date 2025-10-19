@@ -28,6 +28,7 @@ jQuery(document).ready(function($) {
     // НОВІ ЕЛЕМЕНТИ ПІДСУМКІВ
     const $currentUploadSummarySingle = $('#current-upload-summary-single');
     const $currentUploadSummaryTotal = $('#current-upload-summary-total');
+    const $photoUploadControls = $('#photo-upload-controls'); 
 
     // --- Допоміжні функції ---
 
@@ -232,12 +233,27 @@ jQuery(document).ready(function($) {
 
     // 1. При виборі формату (очищаємо поле файлів та оновлюємо підсумок)
     $formatSelect.on('change', function() {
+        const selectedFormat = $(this).val();
+
         $photosInput.val(''); // Очищаємо вибрані файли
         $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть фото для цього формату.</p>');
         
-        // Приховуємо підсумки та попередження (це робить updateCurrentUploadSummary)
-        updateCurrentUploadSummary();
-    });
+        if (selectedFormat) {
+            // Якщо формат обрано, показуємо секції для завантаження
+            $photoUploadControls.show();
+            $photoUploadControls.prop('required', true); // робимо поле файлів обов'язковим
+            $quantitiesContainer.parent().show(); // Показуємо #photo-quantities-container
+        } 
+        else {
+            // Якщо скинуто до "-- виберіть --", приховуємо все
+            $photoUploadControls.hide();
+            $photoUploadControls.prop('required', false);
+            $quantitiesContainer.parent().hide(); // Приховуємо #photo-quantities-container
+        }
+
+    // Приховуємо підсумки та попередження (це робить updateCurrentUploadSummary)
+    updateCurrentUploadSummary();
+});
 
     // 2. При виборі файлів (рендеримо поля копій)
     $photosInput.on('change', function() {
@@ -262,22 +278,26 @@ jQuery(document).ready(function($) {
     });
     
     // 3. Обробка натискання кнопки "Очистити"
-    $clearFormButton.on('click', function(e) {
-        e.preventDefault();
-        $photosInput.val(''); // Очистити поле вибору файлів
-        $formatSelect.val(''); // Очистити вибір формату
-        $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
-        $sumWarning.hide();
-        $submitButton.prop('disabled', true);
-        
-        // Додаткове приховування для чистоти інтерфейсу
-        $currentUploadSummarySingle.hide();
-        $currentUploadSummaryTotal.hide();
-        
-        $currentUploadSum.text('0');
-        $formatTotalSum.text('0');
-        clearMessages();
-    });
+    // 3. Обробка натискання кнопки "Очистити" (Додано приховування)
+$clearFormButton.on('click', function(e) {
+    e.preventDefault();
+    $photosInput.val(''); 
+    $formatSelect.val(''); 
+    $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
+    $sumWarning.hide();
+    $submitButton.prop('disabled', true);
+    
+    // ДОДАНО: Приховування секції завантаження
+    $photoUploadControls.hide();
+    $quantitiesContainer.parent().hide(); 
+    
+    $currentUploadSummarySingle.hide();
+    $currentUploadSummaryTotal.hide();
+    
+    $currentUploadSum.text('0');
+    $formatTotalSum.text('0');
+    clearMessages();
+});
 
 
     // 4. Обробка відправки форми (AJAX)
@@ -357,7 +377,9 @@ jQuery(document).ready(function($) {
     });
 
     // 5. Ініціалізація: оновлення підсумкової суми при завантаженні сторінки
-    updateSummaryList();
-    // Викликаємо оновлення, щоб приховати підсумки, якщо сторінка завантажується без вибраного формату
+    if (!$formatSelect.val()) {
+        $photoUploadControls.hide();
+        $quantitiesContainer.parent().hide();
+    }
     updateCurrentUploadSummary(); 
 });
