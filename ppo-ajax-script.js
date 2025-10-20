@@ -12,6 +12,9 @@ jQuery(document).ready(function($) {
     let sessionFormats = ppo_ajax_object.session_formats;
     let sessionTotal = parseFloat(ppo_ajax_object.session_total);
     
+    // НОВЕ: Масив для накопичення файлів (щоб додавати поступово)
+    let accumulatedFiles = new DataTransfer();  // Початковий порожній DataTransfer для input.files
+    
     // --- Елементи DOM ---
     const $form = $('#photo-print-order-form');
     const $formatSelect = $('#format');
@@ -78,14 +81,13 @@ jQuery(document).ready(function($) {
         const pricePerPhoto = parseFloat(prices[selectedFormat] || 0);
         let currentUploadTotalCopies = 0;
         let currentUploadTotalPrice = 0;
-        let currentUploadTotalFiles = 0; 
+        let currentUploadTotalFiles = accumulatedFiles.files.length;  // НОВЕ: Використовуємо накопичені файли
 
         // Збираємо дані про копії з динамічних полів
         $quantitiesContainer.find('input[type="number"]').each(function() {
             const copies = parseInt($(this).val()) || 1;
             currentUploadTotalCopies += copies;
             currentUploadTotalPrice += copies * pricePerPhoto;
-            currentUploadTotalFiles++; 
         });
 
         // Загальна сума формату (поточна сесія + нове завантаження)
@@ -130,14 +132,24 @@ jQuery(document).ready(function($) {
     }
 
     /**
-     * Рендерить список обраних файлів з полями для копій
-     * @param {FileList} fileList - Список файлів, обраних у формі
+     * Рендерить список обраних файлів з полями для копій (з накопичених файлів)
+     * @param {FileList} newFiles - Нові файли для append (якщо є)
      */
-    function renderFileQuantities(fileList) {
+    function renderFileQuantities(newFiles = null) {
+        // НОВЕ: Якщо newFiles передані, append до accumulated
+        if (newFiles && newFiles.length > 0) {
+            for (let i = 0; i < newFiles.length; i++) {
+                accumulatedFiles.items.add(newFiles[i]);
+            }
+            // Оновлюємо input.files
+            $hiddenFileInput[0].files = accumulatedFiles.files;
+        }
+
         $quantitiesContainer.empty();
+        const currentFiles = accumulatedFiles.files;
         
-        if (fileList.length === 0) {
-            // !!! ОНОВЛЕНО: Якщо немає файлів, повертаємо клікабельне посилання
+        if (currentFiles.length === 0) {
+            // Якщо немає файлів, повертаємо клікабельне посилання
             $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
             // Повторно прив'язуємо клік до посилання, якщо воно було рендерено
             $('#ppo-add-photos-link').on('click', function(e) {
@@ -148,7 +160,32 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        $.each(fileList, function(i, file) {
+        // ОНОВЛЕННЯ: Показуємо лічильник у посиланні (якщо < max)
+        let addLinkText = `Натисніть тут, щоб додати ще фото (додано ${currentFiles.length} з ${maxFilesPerUpload})`;
+        if (currentFiles.length >= maxFilesPerUpload) {
+            addLinkText = `Максимум файлів досягнуто (${currentFiles.length})`;
+        }
+
+        // Додаємо кнопку "Додати ще" в кінець списку (завжди видиму)
+        const $addMoreLink = $('<p>')
+            .attr('id', 'ppo-add-photos-link')
+            .html(addLinkText)
+            .css({
+                'text-align': 'center',
+                'color': currentFiles.length >= maxFilesPerUpload ? '#ccc' : '#0073aa',
+                'cursor': currentFiles.length >= maxFilesPerUpload ? 'default' : 'pointer',
+                'text-decoration': currentFiles.length >= maxFilesPerUpload ? 'none' : 'underline',
+                'font-weight': 'bold',
+                'padding': '10px 0'
+            })
+            .on('click', function(e) {
+                if (currentFiles.length < maxFilesPerUpload) {
+                    e.preventDefault();
+                    $hiddenFileInput.click();
+                }
+            });
+
+        $.each(currentFiles, function(i, file) {
             const $item = $('<div class="photo-item">');
             
             // Контейнер для мініатюри 
@@ -160,7 +197,7 @@ jQuery(document).ready(function($) {
                 };
                 reader.readAsDataURL(file);
             } else {
-                $thumbContainer.text('📄'); // Іконка за замовчуванням
+                $thumbContainer.html('📄'); // Іконка за замовчуванням
             }
             $item.append($thumbContainer);
 
@@ -184,33 +221,38 @@ jQuery(document).ready(function($) {
             const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
                 .data('file-index', i)
                 .on('click', function() {
-                    // !!! ОНОВЛЕНО: використовуємо $hiddenFileInput
-                    removeFileFromList($hiddenFileInput[0], i); 
+                    // НОВЕ: Видаляємо з accumulatedFiles
+                    removeFileFromList(i); 
                 });
             
             $item.append($label, $input, $removeButton);
             $quantitiesContainer.append($item);
         });
 
+        // Додаємо посилання "Додати ще" в кінець
+        $quantitiesContainer.append($addMoreLink);
+
         updateCurrentUploadSummary();
     }
     
     /**
-     * Видаляє файл зі списку file input
+     * Видаляє файл зі списку накопичених файлів
+     * @param {number} indexToRemove - Індекс файлу для видалення
      */
-    function removeFileFromList(input, indexToRemove) {
+    function removeFileFromList(indexToRemove) {
         const dt = new DataTransfer();
-        const files = input.files;
+        const files = accumulatedFiles.files;
         
         for (let i = 0; i < files.length; i++) {
             if (i !== indexToRemove) {
                 dt.items.add(files[i]);
             }
         }
-        input.files = dt.files; // Оновлюємо FileList
+        accumulatedFiles = dt;  // НОВЕ: Оновлюємо accumulated
+        $hiddenFileInput[0].files = accumulatedFiles.files; // Синхронізуємо input
         
         // Перерендеринг списку копій та оновлення підсумку
-        renderFileQuantities(input.files);
+        renderFileQuantities();
     }
 
     /**
@@ -255,7 +297,9 @@ jQuery(document).ready(function($) {
     $formatSelect.on('change', function() {
         const selectedFormat = $(this).val();
 
-        $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле файлів
+        // НОВЕ: При зміні формату очищуємо accumulatedFiles (щоб почати новий batch для формату)
+        accumulatedFiles = new DataTransfer();
+        $hiddenFileInput[0].files = accumulatedFiles.files;
         
         // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання (повторний рендеринг)
         $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
@@ -277,32 +321,34 @@ jQuery(document).ready(function($) {
     updateCurrentUploadSummary();
 });
 
-    // 2. При виборі файлів (рендеримо поля копій)
+    // 2. При виборі файлів (рендеримо поля копій з append)
     $hiddenFileInput.on('change', function() { // !!! ОНОВЛЕНО: Обробляємо нове поле
         const selectedFormat = $formatSelect.val();
-        const files = this.files;
+        const newFiles = this.files;  // НОВЕ: Тільки нові файли
 
         clearMessages();
 
         if (!selectedFormat) {
             displayMessage('Будь ласка, спочатку оберіть формат фото.', 'warning');
-            this.value = null; // Очищуємо поле
+            this.value = ''; // Очищуємо тільки цей вибір
             return;
         }
-        if (files.length > maxFilesPerUpload) { 
+        if (newFiles.length + accumulatedFiles.files.length > maxFilesPerUpload) {  // НОВЕ: Перевіряємо з accumulated
             displayMessage('Максимум ' + maxFilesPerUpload + ' файлів дозволено за одне завантаження.', 'error');
-            this.value = null; 
+            this.value = ''; 
             return;
         }
         
-        // Рендеримо новий список
-        renderFileQuantities(files);
+        // НОВЕ: Append і рендер з накопиченими
+        renderFileQuantities(newFiles);
     });
     
     // 3. Обробка натискання кнопки "Очистити"
     $clearFormButton.on('click', function(e) {
         e.preventDefault();
-        $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле
+        // НОВЕ: Очищуємо accumulatedFiles
+        accumulatedFiles = new DataTransfer();
+        $hiddenFileInput[0].files = accumulatedFiles.files;
         $formatSelect.val(''); 
         
         // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання
@@ -332,7 +378,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
 
         const selectedFormat = $formatSelect.val();
-        if (!$hiddenFileInput[0].files.length) { // !!! ОНОВЛЕНО: Перевіряємо нове поле
+        if (accumulatedFiles.files.length === 0) { // НОВЕ: Перевіряємо накопичені
             displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
             return;
         }
@@ -347,9 +393,9 @@ jQuery(document).ready(function($) {
         formData.append('ppo_ajax_nonce', nonce);
         formData.append('format', selectedFormat);
         
-        // Додаємо файли 
-        for (let i = 0; i < $hiddenFileInput[0].files.length; i++) { // !!! ОНОВЛЕНО: Беремо файли з нового поля
-            formData.append('photos[]', $hiddenFileInput[0].files[i]);
+        // Додаємо файли з accumulated 
+        for (let i = 0; i < accumulatedFiles.files.length; i++) { // НОВЕ: Беремо з accumulated
+            formData.append('photos[]', accumulatedFiles.files[i]);
         }
         
         // Збираємо копії окремим масивом
@@ -369,7 +415,9 @@ jQuery(document).ready(function($) {
             dataType: 'json',
             success: function(response) {
                 $loader.hide();
-                $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле
+                // НОВЕ: Очищуємо accumulated після успіху (файли збережено на сервері)
+                accumulatedFiles = new DataTransfer();
+                $hiddenFileInput[0].files = accumulatedFiles.files;
                 $quantitiesContainer.empty();
                 $formatSelect.val(''); // Очищуємо вибір формату
                 
