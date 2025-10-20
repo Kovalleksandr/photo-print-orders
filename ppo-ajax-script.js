@@ -15,7 +15,10 @@ jQuery(document).ready(function($) {
     // --- Елементи DOM ---
     const $form = $('#photo-print-order-form');
     const $formatSelect = $('#format');
-    const $photosInput = $('#photos');
+    
+    // !!! ОНОВЛЕНО: Старий $photosInput ВИДАЛЕНО
+    // const $photosInput = $('#photos'); 
+
     const $quantitiesContainer = $('#photo-quantities');
     const $currentUploadSum = $('#current-upload-sum');
     const $formatTotalSum = $('#format-total-sum');
@@ -28,7 +31,12 @@ jQuery(document).ready(function($) {
     // НОВІ ЕЛЕМЕНТИ ПІДСУМКІВ
     const $currentUploadSummarySingle = $('#current-upload-summary-single');
     const $currentUploadSummaryTotal = $('#current-upload-summary-total');
-    const $photoUploadControls = $('#photo-upload-controls'); 
+    // const $photoUploadControls = $('#photo-upload-controls'); // ВИДАЛЕНО, оскільки контейнер #photo-upload-controls більше не використовується
+
+    // !!! НОВІ ЕЛЕМЕНТИ ДЛЯ ЛОГІКИ ПОСИЛАННЯ
+    const $hiddenFileInput = $('#ppo-hidden-file-input'); // Нове приховане поле
+    const $addPhotosLink = $('#ppo-add-photos-link');     // Нове клікабельне посилання
+    const $quantitiesParent = $('#photo-quantities-container'); // Батьківський контейнер для логіки видимості
 
     // --- Допоміжні функції ---
 
@@ -129,8 +137,13 @@ jQuery(document).ready(function($) {
         $quantitiesContainer.empty();
         
         if (fileList.length === 0) {
-            $quantitiesContainer.html('<p style="text-align: center; color: #667;">Не вибрано жодного файлу.</p>');
-            // Якщо немає файлів, оновлюємо підсумки (що приховає їх)
+            // !!! ОНОВЛЕНО: Якщо немає файлів, повертаємо клікабельне посилання
+            $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+            // Повторно прив'язуємо клік до посилання, якщо воно було рендерено
+            $('#ppo-add-photos-link').on('click', function(e) {
+                e.preventDefault();
+                $hiddenFileInput.click();
+            });
             updateCurrentUploadSummary();
             return;
         }
@@ -171,7 +184,8 @@ jQuery(document).ready(function($) {
             const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
                 .data('file-index', i)
                 .on('click', function() {
-                    removeFileFromList($photosInput[0], i);
+                    // !!! ОНОВЛЕНО: використовуємо $hiddenFileInput
+                    removeFileFromList($hiddenFileInput[0], i); 
                 });
             
             $item.append($label, $input, $removeButton);
@@ -230,25 +244,33 @@ jQuery(document).ready(function($) {
     }
     
     // --- Обробники подій ---
+    
+    // 0. НОВИЙ ОБРОБНИК КЛІКУ ПОСИЛАННЯ
+    $addPhotosLink.on('click', function(e) {
+        e.preventDefault();
+        $hiddenFileInput.click(); // Викликаємо клік на прихованому полі
+    });
 
     // 1. При виборі формату (очищаємо поле файлів та оновлюємо підсумок)
     $formatSelect.on('change', function() {
         const selectedFormat = $(this).val();
 
-        $photosInput.val(''); // Очищаємо вибрані файли
-        $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть фото для цього формату.</p>');
+        $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле файлів
+        
+        // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання (повторний рендеринг)
+        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+        $('#ppo-add-photos-link').on('click', function(e) {
+            e.preventDefault();
+            $hiddenFileInput.click();
+        });
         
         if (selectedFormat) {
-            // Якщо формат обрано, показуємо секції для завантаження
-            $photoUploadControls.show();
-            $photoUploadControls.prop('required', true); // робимо поле файлів обов'язковим
-            $quantitiesContainer.parent().show(); // Показуємо #photo-quantities-container
+            // Якщо формат обрано, показуємо контейнер кількості
+            $quantitiesParent.show(); // !!! ВИКОРИСТОВУЄМО БАТЬКІВСЬКИЙ КОНТЕЙНЕР #photo-quantities-container
         } 
         else {
             // Якщо скинуто до "-- виберіть --", приховуємо все
-            $photoUploadControls.hide();
-            $photoUploadControls.prop('required', false);
-            $quantitiesContainer.parent().hide(); // Приховуємо #photo-quantities-container
+            $quantitiesParent.hide(); // !!! ВИКОРИСТОВУЄМО БАТЬКІВСЬКИЙ КОНТЕЙНЕР
         }
 
     // Приховуємо підсумки та попередження (це робить updateCurrentUploadSummary)
@@ -256,7 +278,7 @@ jQuery(document).ready(function($) {
 });
 
     // 2. При виборі файлів (рендеримо поля копій)
-    $photosInput.on('change', function() {
+    $hiddenFileInput.on('change', function() { // !!! ОНОВЛЕНО: Обробляємо нове поле
         const selectedFormat = $formatSelect.val();
         const files = this.files;
 
@@ -278,26 +300,31 @@ jQuery(document).ready(function($) {
     });
     
     // 3. Обробка натискання кнопки "Очистити"
-    // 3. Обробка натискання кнопки "Очистити" (Додано приховування)
-$clearFormButton.on('click', function(e) {
-    e.preventDefault();
-    $photosInput.val(''); 
-    $formatSelect.val(''); 
-    $quantitiesContainer.html('<p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>');
-    $sumWarning.hide();
-    $submitButton.prop('disabled', true);
-    
-    // ДОДАНО: Приховування секції завантаження
-    $photoUploadControls.hide();
-    $quantitiesContainer.parent().hide(); 
-    
-    $currentUploadSummarySingle.hide();
-    $currentUploadSummaryTotal.hide();
-    
-    $currentUploadSum.text('0');
-    $formatTotalSum.text('0');
-    clearMessages();
-});
+    $clearFormButton.on('click', function(e) {
+        e.preventDefault();
+        $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле
+        $formatSelect.val(''); 
+        
+        // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання
+        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+        $('#ppo-add-photos-link').on('click', function(e) {
+            e.preventDefault();
+            $hiddenFileInput.click();
+        });
+
+        $sumWarning.hide();
+        $submitButton.prop('disabled', true);
+        
+        // ДОДАНО: Приховування секції завантаження
+        $quantitiesParent.hide(); // !!! ВИКОРИСТОВУЄМО БАТЬКІВСЬКИЙ КОНТЕЙНЕР
+        
+        $currentUploadSummarySingle.hide();
+        $currentUploadSummaryTotal.hide();
+        
+        $currentUploadSum.text('0');
+        $formatTotalSum.text('0');
+        clearMessages();
+    });
 
 
     // 4. Обробка відправки форми (AJAX)
@@ -305,7 +332,7 @@ $clearFormButton.on('click', function(e) {
         e.preventDefault();
 
         const selectedFormat = $formatSelect.val();
-        if (!$photosInput[0].files.length) {
+        if (!$hiddenFileInput[0].files.length) { // !!! ОНОВЛЕНО: Перевіряємо нове поле
             displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
             return;
         }
@@ -321,8 +348,8 @@ $clearFormButton.on('click', function(e) {
         formData.append('format', selectedFormat);
         
         // Додаємо файли 
-        for (let i = 0; i < $photosInput[0].files.length; i++) {
-             formData.append('photos[]', $photosInput[0].files[i]);
+        for (let i = 0; i < $hiddenFileInput[0].files.length; i++) { // !!! ОНОВЛЕНО: Беремо файли з нового поля
+            formData.append('photos[]', $hiddenFileInput[0].files[i]);
         }
         
         // Збираємо копії окремим масивом
@@ -342,7 +369,7 @@ $clearFormButton.on('click', function(e) {
             dataType: 'json',
             success: function(response) {
                 $loader.hide();
-                $photosInput.val(''); // Очищуємо поле вводу файлів
+                $hiddenFileInput.val(''); // !!! ОНОВЛЕНО: Очищуємо нове поле
                 $quantitiesContainer.empty();
                 $formatSelect.val(''); // Очищуємо вибір формату
                 
@@ -364,12 +391,15 @@ $clearFormButton.on('click', function(e) {
                 $formatTotalSum.text('0');
                 $currentUploadSummarySingle.hide();
                 $currentUploadSummaryTotal.hide();
+                
+                // Після успішного завантаження приховуємо контейнер
+                $quantitiesParent.hide(); // !!! ПРИХОВУЄМО КОНТЕЙНЕР
             },
             error: function(xhr, status, error) {
                 $loader.hide();
                 const errorMessage = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message 
-                                            ? xhr.responseJSON.data.message 
-                                            : 'Помилка завантаження. Перевірте консоль.';
+                                                     ? xhr.responseJSON.data.message 
+                                                     : 'Помилка завантаження. Перевірте консоль.';
                 displayMessage(errorMessage, 'error');
                 $submitButton.prop('disabled', false);
             }
@@ -378,8 +408,7 @@ $clearFormButton.on('click', function(e) {
 
     // 5. Ініціалізація: оновлення підсумкової суми при завантаженні сторінки
     if (!$formatSelect.val()) {
-        $photoUploadControls.hide();
-        $quantitiesContainer.parent().hide();
+        $quantitiesParent.hide(); // !!! ВИКОРИСТОВУЄМО БАТЬКІВСЬКИЙ КОНТЕЙНЕР
     }
     updateCurrentUploadSummary(); 
 });

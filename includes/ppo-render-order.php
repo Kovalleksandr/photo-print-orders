@@ -101,6 +101,15 @@ function ppo_render_order_form() {
     <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary" style="margin-bottom: 15px;">Очистити всю сесію замовлення</a>
     
     <form id="photo-print-order-form" enctype="multipart/form-data">
+        <input 
+            type="file" 
+            id="ppo-hidden-file-input" 
+            name="ppo_file_upload[]" 
+            multiple 
+            accept="image/jpeg,image/png" 
+            style="display: none;" 
+        >
+
         <label for="format">Оберіть формат фото:</label>
         <select name="format" id="format" required style="width: 100%; padding: 10px; margin-bottom: 15px;">
             <option value="">-- виберіть --</option>
@@ -112,16 +121,12 @@ function ppo_render_order_form() {
         </select>
 
 
-        <div id="photo-upload-controls" style="display: none;">
-            <label for="photos">Виберіть фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>):</label>
-            <input type="file" name="photos[]" id="photos" multiple accept="image/jpeg,image/png" style="width: 100%; padding: 10px 0;">
-        </div>
-
-        
         <div id="photo-quantities-container" style="display: none;">
             <h4>Кількість копій та видалення</h4>
             <div id="photo-quantities">
-                <p style="text-align: center; color: #666;">Виберіть формат та фото для відображення списку.</p>
+                <p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">
+                    Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
+                </p>
             </div>
             
             <p id="sum-warning" class="ppo-message ppo-message-warning" style="display: none;">
