@@ -30,7 +30,7 @@ function ppo_render_order_form() {
         
         <p>Виберіть формат і до **<?php echo MAX_FILES_PER_UPLOAD; ?>** фото, вкажіть кількість копій (сума ≥<?php echo $min_order_sum; ?> грн), потім натисніть "**Зберегти замовлення**".</p>
         
-        <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary" style="margin-bottom: 15px;">Очистити всю сесію замовлення</a>
+        <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">Очистити всю сесію замовлення</a>
         
         <form id="photo-print-order-form" enctype="multipart/form-data">
             <input 
@@ -39,11 +39,11 @@ function ppo_render_order_form() {
                 name="ppo_file_upload[]" 
                 multiple 
                 accept="image/jpeg,image/png" 
-                style="display: none;" 
+                class="ppo-hidden-file-input"
             >
 
             <label for="format">Оберіть формат фото:</label>
-            <select name="format" id="format" required style="width: 100%; padding: 10px; margin-bottom: 15px;">
+            <select name="format" id="format" required class="ppo-format-select">
                 <option value="">-- виберіть --</option>
                 <?php foreach ($photo_prices as $format => $price): ?>
                     <option value="<?php echo esc_attr($format); ?>" data-price="<?php echo esc_attr($price); ?>">
@@ -53,27 +53,27 @@ function ppo_render_order_form() {
             </select>
 
 
-            <div id="photo-quantities-container" style="display: none;">
+            <div id="photo-quantities-container" class="ppo-quantities-container">
                 <h4>Кількість копій та видалення</h4>
-                <div id="photo-quantities">
-                    <p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">
+                <div id="photo-quantities" class="ppo-photo-quantities">
+                    <p id="ppo-add-photos-link" class="ppo-add-photos-link">
                         Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
                     </p>
                 </div>
                 
-                <p id="sum-warning" class="ppo-message ppo-message-warning" style="display: none;">
+                <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
                     Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
                 </p>
 
-                <p class="ppo-total-sum" id="current-upload-summary-single" style="display: none;">
+                <p class="ppo-total-sum ppo-current-upload-summary-single">
                     Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
                 </p>
-                <p class="ppo-total-sum" id="current-upload-summary-total" style="display: none;">
+                <p class="ppo-total-sum ppo-current-upload-summary-total">
                     Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
                 </p>
 
                 <!-- ФІКС: Кнопки всередині #photo-quantities-container (після підсумків) -->
-                <div style="display: flex; align-items: center; justify-content: center; margin-top: 15px;">
+                <div class="ppo-buttons-in-quantities">
                     <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
                     <div id="ppo-loader" class="ppo-loader"></div>
                     <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
@@ -81,7 +81,7 @@ function ppo_render_order_form() {
             </div>
         </form>
 
-        <div id="ppo-summary">
+        <div id="ppo-summary" class="ppo-summary">
             <?php 
             $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
             $has_order = !empty($session_formats);
@@ -93,9 +93,9 @@ function ppo_render_order_form() {
                 $total_copies_overall = array_sum(array_column($display_formats, 'total_copies'));
             }
             ?>
-            <div id="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
+            <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
                 <h3>Додані формати:</h3>
-                <ul id="ppo-formats-list">
+                <ul id="ppo-formats-list" class="ppo-formats-list">
                     <?php if ($has_order): ?>
                         <?php 
                         // Відображаємо лише формати, ігноруючи технічні ключі
@@ -117,7 +117,7 @@ function ppo_render_order_form() {
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
                         <input type="submit" name="ppo_go_to_delivery" value="Оформити доставку" class="ppo-button ppo-button-primary">
                     </form>
-                    <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">Додати ще фото</a>
+                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">Видалити замовлення</a>
                 </div>
             </div>
         </div>

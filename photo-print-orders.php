@@ -85,6 +85,21 @@ function ppo_enqueue_scripts() {
         true
     );
 
+    // ФІКС: Enqueue CSS тільки на сторінках з PPO шорткодами (оптимізація)
+    global $post;
+    $has_ppo_shortcode = false;
+    if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ppo_order_form')) {
+        $has_ppo_shortcode = true;
+    }
+    if ($has_ppo_shortcode) {
+        wp_enqueue_style(
+            'ppo-forms',
+            PPO_PLUGIN_URL . 'assets/ppo-forms.css',
+            [],
+            filemtime(PPO_PLUGIN_DIR . 'assets/ppo-forms.css')
+        );
+    }
+
     // Передача даних PHP в JavaScript (Локалізація)
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
         'ajax_url'          => admin_url('admin-ajax.php'),

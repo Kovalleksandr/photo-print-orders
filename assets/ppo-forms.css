@@ -116,3 +116,71 @@
     height: 100%;
     object-fit: cover;
 }
+
+
+/* Додаткові класи для рендера (від inline) */
+.ppo-order-form-container .ppo-clear-session-link {
+    margin-bottom: 15px;
+}
+.ppo-order-form-container .ppo-format-select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+.ppo-order-form-container .ppo-add-photos-link {
+    text-align: center;
+    color: #0073aa;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: bold;
+    padding: 10px 0;
+}
+.ppo-order-form-container .ppo-quantities-container {
+    display: none;
+}
+.ppo-order-form-container .ppo-sum-warning,
+.ppo-order-form-container .ppo-current-upload-summary-single,
+.ppo-order-form-container .ppo-current-upload-summary-total {
+    display: none;
+}
+.ppo-order-form-container .ppo-buttons-in-quantities {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+}
+.ppo-order-form-container .ppo-formats-list-container {
+    display: none; /* Динамічно через JS/PHP */
+}
+.ppo-order-form-container .ppo-summary form {
+    display: inline;
+}
+.ppo-order-form-container .ppo-hidden-file-input {
+    display: none;
+}
+
+
+/* Візуальне розділення контейнерів */
+.ppo-order-form-container #photo-print-order-form {
+    background-color: #f0f8ff;  /* Легкий блакитний фон для форми */
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.ppo-order-form-container #ppo-summary {
+    background-color: #f0fff0;  /* Легкий зелений фон для підсумку */
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Додаткові стилі для кращого розділення (опціонально) */
+.ppo-order-form-container #photo-print-order-form h4,
+.ppo-order-form-container #ppo-summary h3 {
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
