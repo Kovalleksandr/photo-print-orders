@@ -168,8 +168,12 @@ function ppo_display_order_metabox($post) {
 
     echo '<h4>Основна інформація</h4>';
     echo '<p><strong>№ Замовлення:</strong> ' . esc_html($order_meta['order_id'] ?? 'N/A') . '</p>';
-    echo '<p><strong>Дата/Час:</strong> ' . esc_html($order_meta['timestamp'] ?? 'N/A') . '</p>';
-    echo '<p><strong>Статус:</strong> <span style="font-weight: bold; color: ' . (ppo_get_status_text($order_meta['status'] ?? 'new') === 'Нове' ? '#0073aa' : 'green') . '">' . ppo_get_status_text($order_meta['status'] ?? 'new') . '</span></p>';
+    // ФІКС: Timestamp з post_date, якщо не в meta
+    echo '<p><strong>Дата/Час:</strong> ' . esc_html(get_the_date('d.m.Y H:i', $post) ?: ($order_meta['timestamp'] ?? 'N/A')) . '</p>';
+    // ФІКС: Статус з post_status (або meta)
+    $post_status = get_post_status($post->ID);
+    $status_text = ppo_get_status_text($post_status);  // Використовуємо функцію для тексту
+    echo '<p><strong>Статус:</strong> <span style="font-weight: bold; color: ' . (strpos($status_text, 'Нове') !== false ? '#0073aa' : 'green') . '">' . $status_text . '</span></p>';
     echo '<p><strong>Загальна Сума:</strong> <strong style="font-size: 1.2em;">' . esc_html($order_meta['total'] ?? 0) . ' грн</strong></p>';
 
     echo '<h4>Деталі Замовлення</h4>';
@@ -218,3 +222,15 @@ function ppo_set_order_title($post_id) {
     }
 }
 add_action('save_post', 'ppo_set_order_title');
+
+
+/**
+ * ФІКС: Показуємо всі статуси замовлень в адмін-листі (бо дефолт — тільки publish).
+ */
+function ppo_show_all_order_statuses($query) {
+    if (is_admin() && $query->is_main_query() && $query->get('post_type') === 'ppo_order') {
+        $query->set('post_status', 'any');  // Показуємо new, pending_payment, on-hold, completed тощо
+    }
+    return $query;
+}
+add_filter('pre_get_posts', 'ppo_show_all_order_statuses');

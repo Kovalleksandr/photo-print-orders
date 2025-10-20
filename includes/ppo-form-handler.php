@@ -78,7 +78,12 @@ function ppo_handle_delivery_submission() {
 // ====================================================================
 // 7. ОБРОБКА КРОКУ 3: ОПЛАТА
 // ====================================================================
+/**
+ * Обробка форми оплати/підтвердження (Крок 3).
+ * Створює запис у CPT і очищає сесію.
+ */
 function ppo_handle_payment_submission() {
+    // ФІКС: Перевірка на наявність POST (щоб уникнути виклику без форми)
     if (!isset($_POST['ppo_submit_payment']) || !isset($_POST['ppo_nonce']) || !wp_verify_nonce($_POST['ppo_nonce'], 'ppo_payment_nonce')) {
         return; // Вихід, якщо запит недійсний
     }
@@ -95,49 +100,81 @@ function ppo_handle_payment_submission() {
     $order_id = $_SESSION['ppo_order_id'];
     $total_sum = $_SESSION['ppo_total'] ?? 0;
     
-    // Перевіряємо, чи існує вже CPT. Якщо так - оновлюємо.
-    $existing_posts = get_posts([
-        'post_type'  => 'ppo_order',
-        'meta_key'   => 'ppo_order_id',
-        'meta_value' => $order_id,
-        'posts_per_page' => 1,
-        'fields'     => 'ids',
-    ]);
+    // ДЕБАГ: Логування для payment
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("PPO Payment Debug: Order ID = '" . $order_id . "', Total = " . $total_sum . ", Method = '" . $payment_method . "'");
+    }
+    
+    try {
+        // Перевіряємо, чи існує вже CPT. Якщо так - оновлюємо.
+        $existing_posts = get_posts([
+            'post_type'  => 'ppo_order',
+            'meta_key'   => 'ppo_order_id',
+            'meta_value' => $order_id,
+            'posts_per_page' => 1,
+            'fields'     => 'ids',
+        ]);
 
-    if (!empty($existing_posts)) {
-        $post_id = $existing_posts[0];
-        // Оновлюємо статус, адресу та метод оплати
-        $order_post_data = [
-            'ID'          => $post_id,
-            'post_status' => 'pending_payment', // Новий статус для очікування оплати
-            'post_title'  => 'Замовлення #' . $order_id . ' - Очікує оплати',
+        // Уніфікований масив даних для meta (всі поля в одному місці)
+        $order_data = [
+            'order_id' => $order_id,
+            'total' => $total_sum,
+            'timestamp' => current_time('mysql'),  // ФІКС: Додаємо дату/час
+            'status' => 'pending_payment',  // ФІКС: Зберігаємо статус у meta
+            'delivery_address' => $_SESSION['ppo_delivery_address'] ?? 'Не вказано',
+            'payment_method' => $payment_method,
+            'formats' => $_SESSION['ppo_formats'] ?? [],  // Формати з сесії
+            'order_folder_path' => $_SESSION['ppo_formats']['order_folder_path'] ?? (PPO_CDN_ROOT_PATH . $order_id . '/'),  // ФІКС: CDN шлях
         ];
-        wp_update_post($order_post_data);
-        update_post_meta($post_id, 'ppo_payment_method', $payment_method);
-    } else {
-        // Якщо CPT не існує (не повинно статися, але для безпеки), створюємо його.
-        // Ця логіка повторюється з кроку 2, але тут вона фінальна.
-        $order_post_data = [
-            'post_title'   => 'Замовлення #' . $order_id . ' - Очікує оплати',
-            'post_status'  => 'pending_payment',
-            'post_type'    => 'ppo_order',
-        ];
 
-        $post_id = wp_insert_post($order_post_data);
+        if (!empty($existing_posts)) {
+            $post_id = $existing_posts[0];
+            // Оновлюємо статус, адресу та метод оплати
+            $order_post_data = [
+                'ID'          => $post_id,
+                'post_status' => 'pending_payment', // Новий статус для очікування оплати
+                'post_title'  => 'Замовлення #' . $order_id . ' - Очікує оплати',
+            ];
+            $update_result = wp_update_post($order_post_data);
+            if (is_wp_error($update_result)) {
+                throw new Exception('Помилка оновлення CPT: ' . $update_result->get_error_message());
+            }
+            
+            // ФІКС: Оновлюємо уніфікований meta
+            update_post_meta($post_id, 'ppo_order_data', $order_data);
+            
+            // ДЕБАГ: Логування оновлення
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("PPO Payment Debug: Updated existing CPT ID = " . $post_id . " with unified data");
+            }
+        } else {
+            // Якщо CPT не існує, створюємо його.
+            $order_post_data = [
+                'post_title'   => 'Замовлення #' . $order_id . ' - Очікує оплати',
+                'post_status'  => 'pending_payment',
+                'post_type'    => 'ppo_order',
+            ];
 
-        if (is_wp_error($post_id)) {
-            $error_message = urlencode('Помилка при збереженні замовлення в базу даних: ' . $post_id->get_error_message());
-            wp_redirect(esc_url(home_url('/orderpagepayment/')) . '?error=' . $error_message);
-            exit;
+            $post_id = wp_insert_post($order_post_data);
+
+            if (is_wp_error($post_id)) {
+                throw new Exception('Помилка створення CPT: ' . $post_id->get_error_message());
+            }
+            
+            // ФІКС: Зберігаємо уніфікований meta (включаючи order_id для пошуку)
+            update_post_meta($post_id, 'ppo_order_id', $order_id);  // Окремо для пошуку
+            update_post_meta($post_id, 'ppo_order_data', $order_data);  // Усе в одному
+            
+            // ДЕБАГ: Логування створення
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("PPO Payment Debug: Created new CPT ID = " . $post_id . " with unified data: " . print_r($order_data, true));
+            }
         }
-        
-        // Зберігаємо мета-дані
-        update_post_meta($post_id, 'ppo_order_id', $order_id);
-        update_post_meta($post_id, 'ppo_total_sum', $total_sum);
-        update_post_meta($post_id, 'ppo_delivery_address', $_SESSION['ppo_delivery_address'] ?? 'Не вказано');
-        update_post_meta($post_id, 'ppo_order_data', $_SESSION['ppo_formats']);
-        update_post_meta($post_id, 'ppo_payment_method', $payment_method);
-        update_post_meta($post_id, 'ppo_files_path', PPO_UPLOAD_DIR . $order_id);
+    } catch (Exception $e) {
+        // ФІКС: Try-catch для CPT — якщо помилка, редірект з error, не crash
+        $error_message = urlencode('Помилка збереження замовлення: ' . $e->getMessage());
+        wp_redirect(esc_url(home_url('/orderpagepayment/')) . '?error=' . $error_message);
+        exit;
     }
     
     // 2. Логіка перенаправлення/оплати
@@ -186,4 +223,8 @@ function ppo_handle_payment_submission() {
         exit;
     }
 }
-add_action('wp_loaded', 'ppo_handle_payment_submission');
+
+// ФІКС: Видалено add_action('wp_loaded', 'ppo_handle_payment_submission'); — це викликало помилку на кожному init без POST
+// Тепер payment обробляється тільки через ppo_handle_forms на 'init' з перевіркою isset($_POST['ppo_submit_payment'])
+// ФІКС: Видалено add_action('wp_loaded', 'ppo_handle_payment_submission'); — це викликало помилку на кожному init без POST
+// Тепер payment обробляється тільки через ppo_handle_forms на 'init' з перевіркою isset($_POST['ppo_submit_payment'])

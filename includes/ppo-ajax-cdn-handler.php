@@ -64,16 +64,31 @@ function ppo_ajax_file_upload() {
     $order_folder_name = $_SESSION['ppo_order_id'];
     $format_folder_name = sanitize_title($format); 
     
+    // ДЕБАГ: Логування базових даних
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log("PPO AJAX Debug: Order ID = '" . $order_folder_name . "', Format = '" . $format . "', Format Folder = '" . $format_folder_name . "', Files Count = " . count($_FILES['photos']['name']));
+    }
+    
     try {
         // 1. Створення кореневої папки замовлення (якщо не існує)
         $order_folder_path = $cdn_uploader->create_folder($order_folder_name, PPO_CDN_ROOT_PATH);
         // Зберігаємо шлях у сесії
         $_SESSION['ppo_formats']['order_folder_path'] = $order_folder_path; 
         
+        // ДЕБАГ: Логування після створення order папки
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("PPO AJAX Debug: Order Folder Path = '" . $order_folder_path . "'");
+        }
+        
         // 2. Створення папки для поточного формату
         $full_format_path = $cdn_uploader->create_folder($format_folder_name, $order_folder_path);
 
-        // 3. Завантаження та обробка кожного файлу
+        // ДЕБАГ: Логування після створення format папки
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("PPO AJAX Debug: Full Format Path = '" . $full_format_path . "'");
+        }
+
+        // 3. Завантаження та обробка кожного файлу (ТЕПЕР ПЕР-ФАЙЛ ПАПКА ЗА КОПІЯМИ)
         for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
             $filename = sanitize_file_name($_FILES['photos']['name'][$i]);
             $tmp_name = $_FILES['photos']['tmp_name'][$i];
@@ -86,8 +101,22 @@ function ppo_ajax_file_upload() {
                 throw new \Exception("Файл '{$filename}' має недопустимий тип: {$file_type}. Дозволено: " . implode(', ', ALLOWED_MIME_TYPES));
             }
 
-            // Завантаження файлу на CDN
-            $cdn_file_info = $cdn_uploader->upload_file($tmp_name, $filename, $full_format_path);
+            // НОВЕ: Створення підпапки за кількістю копій для цього файлу (e.g., '1', '12')
+            $copies_folder_name = (string) $copies;  // "1", "12" тощо
+            $copies_folder_path = $cdn_uploader->create_folder($copies_folder_name, $full_format_path);
+
+            // ДЕБАГ: Логування для кожної підпапки
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("PPO AJAX Debug: Copies for file " . $i . " = '" . $copies . "', Copies Folder Name = '" . $copies_folder_name . "', Copies Path = '" . $copies_folder_path . "'");
+            }
+
+            // Завантаження файлу на CDN у copies-папку
+            $cdn_file_info = $cdn_uploader->upload_file($tmp_name, $filename, $copies_folder_path);
+            
+            // ДЕБАГ: Логування для кожного файлу
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("PPO AJAX Debug: Uploading file '" . $filename . "' to path '" . $cdn_file_info->path . "' (copies: " . $copies . ")");
+            }
             
             // Розрахунок підсумків для цього файлу
             $file_price = $copies * $current_format['price'];
