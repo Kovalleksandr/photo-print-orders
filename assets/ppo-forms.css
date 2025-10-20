@@ -1,0 +1,118 @@
+/* Стилі для PPO Order Form */
+.ppo-order-form-container .ppo-button {
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 5px;
+    text-decoration: none;
+    border-radius: 3px;
+    font-size: 14px;
+    visibility: visible;
+}
+.ppo-order-form-container .ppo-button-primary {
+    background: #0073aa;
+    color: white;
+}
+.ppo-order-form-container .ppo-button-primary:hover {
+    background: #005177;
+}
+.ppo-order-form-container .ppo-button-secondary {
+    background: #f7f7f7;
+    color: #0073aa;
+    border: 1px solid #0073aa;
+}
+.ppo-order-form-container .ppo-button-secondary:hover {
+    background: #e0e0e0;
+}
+.ppo-order-form-container .ppo-total-sum {
+    font-weight: bold;
+    margin: 10px 0;
+}
+.ppo-order-form-container .ppo-buttons-container {
+    margin-top: 15px;
+}
+.ppo-order-form-container .ppo-message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 3px;
+}
+.ppo-order-form-container .ppo-message-success {
+    color: green;
+    background: #e8f5e8;
+}
+.ppo-order-form-container .ppo-message-error {
+    color: red;
+    background: #ffebee;
+}
+.ppo-order-form-container .ppo-message-warning {
+    color: orange;
+    background: #fff3cd;
+}
+.ppo-order-form-container .ppo-loader {
+    display: none;
+    margin-left: 10px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.ppo-order-form-container #photo-quantities {
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f9f9f9;
+}
+.ppo-order-form-container .photo-item {
+    border-bottom: 1px solid #eee;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ppo-order-form-container .photo-item:last-child {
+    border-bottom: none;
+}
+.ppo-order-form-container .photo-item label {
+    font-weight: normal;
+    font-size: 0.9em;
+    display: inline-block;
+    width: 40%;
+    flex-grow: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    margin-right: 10px;
+}
+.ppo-order-form-container .photo-item input[type="number"] {
+    width: 70px;
+    margin: 0 10px;
+    padding: 5px;
+    text-align: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+.ppo-order-form-container .photo-thumbnail-container {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ccc;
+    display: inline-flex;
+    margin-right: 10px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+}
+.ppo-order-form-container .photo-thumbnail-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
