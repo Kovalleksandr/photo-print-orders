@@ -89,6 +89,18 @@ function ppo_render_order_form() {
             height: 100%;
             object-fit: cover;
         }
+        /* НОВЕ: Стилі для кнопок у #photo-quantities-container (в середині контейнера) */
+        #photo-quantities-container .buttons-in-quantities {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            border-top: 1px solid #eee;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        #photo-quantities-container .buttons-in-quantities .ppo-button {
+            margin: 0 5px;
+        }
     </style>
 
     <div id="ppo-alert-messages">
@@ -129,6 +141,13 @@ function ppo_render_order_form() {
                 </p>
             </div>
             
+            <!-- ФІКС: Кнопки тепер у #photo-quantities-container (після #photo-quantities, перед підсумками) — з'являться з контейнером -->
+            <div class="buttons-in-quantities">
+                <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
+                <div id="ppo-loader" class="ppo-loader"></div>
+                <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
+            </div>
+            
             <p id="sum-warning" class="ppo-message ppo-message-warning" style="display: none;">
                 Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
             </p>
@@ -141,11 +160,6 @@ function ppo_render_order_form() {
             </p>
         </div>
 
-        <div style="display: flex; align-items: center;">
-            <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
-            <div id="ppo-loader" class="ppo-loader"></div>
-            <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
-        </div>
     </form>
 
     <div id="ppo-summary">
