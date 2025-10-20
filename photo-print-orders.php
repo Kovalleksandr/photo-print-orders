@@ -117,3 +117,109 @@ add_action('wp_ajax_ppo_file_upload', 'ppo_ajax_file_upload');
 add_action('wp_ajax_nopriv_ppo_file_upload', 'ppo_ajax_file_upload');
 // Реєстрація обробників форм POST
 add_action('init', 'ppo_handle_forms');
+
+
+// ====================================================================
+// 5. Клас LiqPay
+// ====================================================================
+
+require_once PPO_PLUGIN_DIR . 'includes/ppo-liqpay-class.php';
+
+
+
+
+// ====================================================================
+// 9. LIQPAY CALLBACK ENDPOINT (ОБРОБКА СТАТУСУ ПЛАТЕЖУ)
+// ====================================================================
+
+/**
+ * Реєструє REST API маршрут для прийому Callback від LiqPay.
+ */
+function ppo_register_liqpay_callback_route() {
+    register_rest_route('ppo/v1', '/callback/', array(
+        'methods'             => 'POST',
+        'callback'            => 'ppo_handle_liqpay_callback',
+        'permission_callback' => '__return_true', // Відкритий доступ, бо LiqPay не авторизується
+    ));
+}
+add_action('rest_api_init', 'ppo_register_liqpay_callback_route');
+
+/**
+ * Обробляє дані, надіслані LiqPay про статус платежу.
+ * @param WP_REST_Request $request Об'єкт запиту.
+ */
+function ppo_handle_liqpay_callback(WP_REST_Request $request) {
+    // 1. Отримуємо дані
+    $data      = $request->get_param('data');
+    $signature = $request->get_param('signature');
+    
+    // Перевірка наявності даних
+    if (empty($data) || empty($signature)) {
+        return new WP_REST_Response(['message' => 'Invalid Request (missing data/signature)'], 400);
+    }
+    
+    // 2. Ініціалізуємо клас LiqPay для перевірки підпису
+    $liqpay = new PPO_LiqPay(LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY);
+    
+    // 3. Перевіряємо підпис
+    // Ми використовуємо той самий метод, що й для генерації форми, для перевірки
+    // (Хоча в реальному SDK є окремий метод для перевірки, тут використовуємо обгортку)
+    $expected_signature = base64_encode(sha1(LIQPAY_PRIVATE_KEY . $data . LIQPAY_PRIVATE_KEY, 1));
+
+    if ($signature !== $expected_signature) {
+        // Логування помилки
+        error_log('LiqPay Callback Error: Signature mismatch for data: ' . $data);
+        return new WP_REST_Response(['message' => 'Signature mismatch'], 403);
+    }
+
+    // 4. Декодуємо дані
+    $decoded_data = json_decode(base64_decode($data), true);
+    $order_id = $decoded_data['order_id'] ?? null;
+    $status   = $decoded_data['status'] ?? 'unknown';
+
+    if (!$order_id) {
+        return new WP_REST_Response(['message' => 'Missing Order ID'], 400);
+    }
+
+    // 5. Оновлюємо статус замовлення в WordPress
+    $posts = get_posts([
+        'post_type'  => 'ppo_order',
+        'meta_key'   => 'ppo_order_id',
+        'meta_value' => $order_id,
+        'posts_per_page' => 1,
+        'fields'     => 'ids',
+    ]);
+
+    if (!empty($posts)) {
+        $post_id = $posts[0];
+        $new_status = 'pending_payment';
+
+        if ($status === 'success' || $status === 'sandbox') {
+            $new_status = 'processing';
+            $post_title = 'Замовлення #' . $order_id . ' - Оплачено (Обробка)';
+            // Можна додати додаткову логіку: надіслати email клієнту/адміністратору
+        } elseif ($status === 'failure' || $status === 'error' || $status === 'reversed') {
+            $new_status = 'failed';
+            $post_title = 'Замовлення #' . $order_id . ' - Помилка оплати';
+        } else {
+            // Інші статуси (wait_accept, hold_wait, processing)
+            $new_status = 'pending_payment';
+            $post_title = 'Замовлення #' . $order_id . ' - Очікує оплати (LiqPay: ' . $status . ')';
+        }
+        
+        // Оновлюємо пост
+        wp_update_post([
+            'ID'          => $post_id,
+            'post_status' => $new_status,
+            'post_title'  => $post_title,
+        ]);
+        
+        // Зберігаємо повний лог LiqPay
+        update_post_meta($post_id, 'ppo_liqpay_status', $status);
+        update_post_meta($post_id, 'ppo_liqpay_callback_data', $decoded_data);
+        
+        return new WP_REST_Response(['message' => 'Order status updated to ' . $new_status], 200);
+    }
+
+    return new WP_REST_Response(['message' => 'Order not found in DB'], 404);
+}

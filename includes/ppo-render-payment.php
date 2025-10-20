@@ -8,18 +8,6 @@ if (!defined('ABSPATH')) {
 }
 
 function ppo_render_payment_form() {
-    if (!isset($_SESSION['ppo_order_id']) || empty($_SESSION['ppo_delivery_address'])) {
-        // Забезпечуємо стилі для повідомлення про помилку
-        $style = '<style>.ppo-message { padding: 10px; margin: 10px 0; border-radius: 3px; } .ppo-message-error { color: red; background: #ffebee; }</style>';
-        return $style . '<div class="ppo-message ppo-message-error"><p>Неповні дані. Почніть з <a href="' . esc_url(home_url('/orderpagedelivery/')) . '">доставки</a>.</p></div>';
-    }
-    
-    ob_start();
-    $total = $_SESSION['ppo_total'] ?? 0;
-    
-    // Фільтруємо, щоб показувати лише реальні формати, а не order_folder_path
-    $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
-    
     // Включаємо базові стилі, якщо вони не були включені раніше
     echo '<style>
         .ppo-button { display: inline-block !important; padding: 8px 16px; margin: 5px; text-decoration: none; border-radius: 3px; font-size: 14px; visibility: visible !important; }
@@ -30,18 +18,77 @@ function ppo_render_payment_form() {
         .ppo-message-success { color: green; background: #e8f5e8; }
         .ppo-message-error { color: red; background: #ffebee; }
         .ppo-buttons-container { margin-top: 15px; }
+        .ppo-payment-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-top: 20px; background: #f9f9f9; }
     </style>';
+    
+    if (!isset($_SESSION['ppo_order_id'])) {
+        return '<div class="ppo-message ppo-message-error"><p>Замовлення не знайдено. Будь ласка, почніть із <a href="' . esc_url(home_url('/order/')) . '">форми замовлення</a>.</p></div>';
+    }
+    
+    ob_start();
+    $order_id = $_SESSION['ppo_order_id'];
+    $total = $_SESSION['ppo_total'] ?? 0;
+    
+    // Фільтруємо, щоб показувати лише реальні формати
+    $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
+    
+    // --- Обробка повідомлень про успіх/помилку ---
 
-    if (isset($_GET['success']) && $_GET['success'] === 'order_completed'): ?>
+    if (isset($_GET['success']) && $_GET['success'] === 'bank_transfer_submitted'):
+        // Успішне підтвердження банківського переказу
+    ?>
         <div class="ppo-message ppo-message-success">
-            <h2>🎉 Замовлення успішно оформлено!</h2>
-            <p>Ваше замовлення (**№<?php echo esc_html($_SESSION['ppo_order_id'] ?? 'N/A'); ?>**) прийнято в обробку. Загальна сума: **<?php echo esc_html($total); ?> грн**.</p>
-            <p>Наші менеджери зв'яжуться з вами для уточнення деталей оплати та відправлення.</p>
+            <h2>✅ Замовлення №<?php echo esc_html($order_id); ?> успішно оформлено!</h2>
+            <p>Ваше замовлення прийнято в обробку. Загальна сума: **<?php echo esc_html($total); ?> грн**.</p>
         </div>
-        <p><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-primary">Створити нове замовлення</a></p>
-    <?php else: ?>
+        
+        <div class="ppo-payment-box">
+            <h3>Оплата за реквізитами (Банківський переказ)</h3>
+            <p>Будь ласка, здійсніть переказ на суму **<?php echo esc_html($total); ?> грн** за наступними реквізитами:</p>
+            
+            <p>
+                **Отримувач:** ФОП Приклад Прикладович<br>
+                **ІПН:** 0000000000<br>
+                **Рахунок IBAN:** UA000000000000000000000000000<br>
+                **Призначення платежу:** Оплата замовлення №<?php echo esc_html($order_id); ?>
+            </p>
+            <p>Після надходження коштів ми почнемо друк. Наші менеджери зв'яжуться з вами.</p>
+        </div>
+        
+        <p class="ppo-buttons-container"><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary">Створити нове замовлення</a></p>
+
+    <?php elseif (isset($_GET['success']) && $_GET['success'] === 'payment_success'):
+        // Успішна оплата LiqPay (повернення з result_url)
+    ?>
+        <div class="ppo-message ppo-message-success">
+            <h2>🥳 Оплата успішна!</h2>
+            <p>Замовлення **№<?php echo esc_html($order_id); ?>** успішно сплачено на суму **<?php echo esc_html($total); ?> грн**.</p>
+            <p>Ми отримали підтвердження і розпочинаємо роботу. Очікуйте повідомлення від наших менеджерів!</p>
+        </div>
+        
+        <p class="ppo-buttons-container"><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-primary">Створити нове замовлення</a></p>
+
+    <?php elseif (isset($_SESSION['ppo_liqpay_form'])):
+        // Відображення форми LiqPay після вибору "карткою"
+        $liqpay_form = $_SESSION['ppo_liqpay_form'];
+        unset($_SESSION['ppo_liqpay_form']); // Видаляємо форму з сесії, щоб не відображалася знову
+
+    ?>
+        <h2>Крок 3: Оплата замовлення №<?php echo esc_html($order_id); ?></h2>
+        <p>Для завершення замовлення **№<?php echo esc_html($order_id); ?>** на суму **<?php echo esc_html($total); ?> грн** натисніть кнопку "Оплатити LiqPay". Ви будете перенаправлені на платіжну сторінку.</p>
+        
+        <div class="ppo-payment-box" style="text-align: center;">
+            <?php echo $liqpay_form; ?>
+        </div>
+        <p class="ppo-buttons-container">
+            <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">← Назад до доставки</a>
+        </p>
+        
+    <?php else: 
+        // Відображення початкової форми вибору методу оплати
+    ?>
         <h2>Крок 3: Оплата та підтвердження</h2>
-        <p>Ваше замовлення **№<?php echo esc_html($_SESSION['ppo_order_id']); ?>**:</p>
+        <p>Ваше замовлення **№<?php echo esc_html($order_id); ?>**:</p>
         <ul>
             <?php foreach ($session_formats as $format => $details): ?>
                 <li>**<?php echo esc_html($format); ?>**: <?php echo esc_html($details['total_copies']); ?> копій (<?php echo esc_html($details['total_price']); ?> грн)</li>
@@ -54,8 +101,8 @@ function ppo_render_payment_form() {
         <form method="post">
             <?php wp_nonce_field('ppo_payment_nonce', 'ppo_nonce'); ?>
             
-            <label><input type="radio" name="payment_method" value="card" required checked> Оплата карткою (LiqPay/інший сервіс)</label><br>
-            <label><input type="radio" name="payment_method" value="bank_transfer" required> Оплата за реквізитами</label><br><br>
+            <label><input type="radio" name="payment_method" value="card" required checked> Оплата карткою (LiqPay)</label><br>
+            <label><input type="radio" name="payment_method" value="bank_transfer" required> Оплата за реквізитами (Банківський переказ)</label><br><br>
             
             <div class="ppo-buttons-container">
                 <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">← Назад до доставки</a>
