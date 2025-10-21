@@ -28,9 +28,9 @@ function ppo_render_order_form() {
             <?php endif; ?>
         </div>
         
-        <p>Виберіть формат і до **<?php echo MAX_FILES_PER_UPLOAD; ?>** фото, вкажіть кількість копій (сума ≥<?php echo $min_order_sum; ?> грн), потім натисніть "**Зберегти замовлення**".</p>
         
-        <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">Очистити всю сесію замовлення</a>
+        <p>мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
+        <p>завантажуйте по <?php echo MAX_FILES_PER_UPLOAD; ?> фото.</p>
         
         <form id="photo-print-order-form" enctype="multipart/form-data">
             <input 

@@ -10,7 +10,7 @@ jQuery(document).ready(function($) {
 
     // Зберігаємо формати та загальну суму в JS для швидкого оновлення інтерфейсу
     let sessionFormats = ppo_ajax_object.session_formats;
-    let sessionTotal = parseFloat(ppo_ajax_object.session_total);
+    let sessionTotal = parseFloat(ppo_ajax_object.session_total) || 0;  // ФІКС: || 0 для уникнення NaN
     
     // НОВЕ: Масив для накопичення файлів (щоб додавати поступово)
     let accumulatedFiles = new DataTransfer();  // Початковий порожній DataTransfer для input.files
@@ -426,7 +426,7 @@ jQuery(document).ready(function($) {
                     
                     // Оновлення глобальної сесії JS
                     sessionFormats = response.data.formats;
-                    sessionTotal = parseFloat(response.data.total);
+                    sessionTotal = parseFloat(response.data.total) || 0;  // ФІКС: || 0
                     
                     updateSummaryList(); // Оновлюємо підсумок замовлення
                 } else {
@@ -459,4 +459,7 @@ jQuery(document).ready(function($) {
         $quantitiesParent.hide(); // !!! ВИКОРИСТОВУЄМО БАТЬКІВСЬКИЙ КОНТЕЙНЕР
     }
     updateCurrentUploadSummary(); 
+    
+    // ФІКС: НОВИЙ ВИКЛИК НА INIT - оновлює сесійний підсумок і показує контейнер, якщо є збережені фото
+    updateSummaryList();  // Це забезпечує видимість #ppo-formats-list-container після reload, якщо sessionFormats не порожній
 });
