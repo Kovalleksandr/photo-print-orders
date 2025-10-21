@@ -32,14 +32,25 @@ jQuery(document).ready(function($) {
     const $clearFormButton = $('#clear-form');
     
     // НОВІ ЕЛЕМЕНТИ ПІДСУМКІВ
-    const $currentUploadSummarySingle = $('#current-upload-summary-single');
-    const $currentUploadSummaryTotal = $('#current-upload-summary-total');
+    const $currentUploadSummarySingle = $('.ppo-current-upload-summary-single');
+    const $currentUploadSummaryTotal = $('.ppo-current-upload-summary-total');
     // const $photoUploadControls = $('#photo-upload-controls'); // ВИДАЛЕНО, оскільки контейнер #photo-upload-controls більше не використовується
 
     // !!! НОВІ ЕЛЕМЕНТИ ДЛЯ ЛОГІКИ ПОСИЛАННЯ
     const $hiddenFileInput = $('#ppo-hidden-file-input'); // Нове приховане поле
     const $addPhotosLink = $('#ppo-add-photos-link');     // Нове клікабельне посилання
     const $quantitiesParent = $('#photo-quantities-container'); // Батьківський контейнер для логіки видимості
+
+    // ІНТЕГРОВАНО: Елементи для прогресу (з фіксом: без дублювання спінера)
+    const $progressContainer = $('#ppo-progress-container');
+    const $progressFill = $('#ppo-progress-fill');
+    const $progressText = $('#ppo-progress-text');
+
+    // ІНТЕГРОВАНО: Елементи для модального вікна (success/error)
+    const $successModal = $('#ppo-success-modal');
+    const $modalMessage = $('#ppo-modal-message');
+    const $modalClose = $('.ppo-modal-close');
+    const $modalOk = $('#ppo-modal-ok');
 
     // --- Допоміжні функції ---
 
@@ -51,7 +62,7 @@ jQuery(document).ready(function($) {
     }
 
     /**
-     * Відображає повідомлення користувачеві
+     * Відображає повідомлення користувачеві (для помилок/попереджень — верх форми)
      * @param {string} message - Текст повідомлення
      * @param {string} type - 'success', 'error', 'warning'
      */
@@ -61,6 +72,53 @@ jQuery(document).ready(function($) {
             .addClass('ppo-message ppo-message-' + type)
             .html('<p>' + message + '</p>');
         $messages.append($alert);
+    }
+
+        // ІНТЕГРОВАНО: Функція для показу модального вікна (оновлено: плавне затухання та авто-закриття через 2 сек)
+    function showModal(message) {
+        $modalMessage.text(message);
+        $successModal.removeClass('show').show();  // Показуємо, але без класу (для fade-in)
+        $('body').addClass('ppo-modal-open');  // Блокуємо скрол
+
+        // ФІКС: Плавний fade-in через setTimeout (щоб CSS transition спрацював)
+        setTimeout(function() {
+            $successModal.addClass('show');
+        }, 10);
+
+        // ФІКС: Авто-закриття через 2 секунди (з fade-out)
+        setTimeout(function() {
+            hideModal();
+        }, 2000);
+
+        // Закриття модалу на клік поза контентом
+        $successModal.on('click', function(e) {
+            if (e.target === this) {
+                hideModal();
+            }
+        });
+
+        // Закриття на кнопку OK
+        $modalOk.on('click', function() {
+            hideModal();
+        });
+
+        // Закриття на &times; або ESC
+        $modalClose.on('click', hideModal);
+        $(document).on('keydown.modal', function(e) {
+            if (e.key === 'Escape') {
+                hideModal();
+            }
+        });
+    }
+
+    function hideModal() {
+        $successModal.removeClass('show');  // ФІКС: Fade-out через видалення класу
+        setTimeout(function() {  // Чекаємо завершення анімації перед хованням
+            $successModal.hide();
+            $('body').removeClass('ppo-modal-open');
+            $successModal.off('click');  // Очищуємо event
+            $(document).off('keydown.modal');
+        }, 300);  // 0.3s = час transition
     }
     
     /**
@@ -149,8 +207,8 @@ jQuery(document).ready(function($) {
         const currentFiles = accumulatedFiles.files;
         
         if (currentFiles.length === 0) {
-            // Якщо немає файлів, повертаємо клікабельне посилання
-            $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+            // Якщо немає файлів, повертаємо клікабельне посилання з підказкою для Drag & Drop
+            $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
             // Повторно прив'язуємо клік до посилання, якщо воно було рендерено
             $('#ppo-add-photos-link').on('click', function(e) {
                 e.preventDefault();
@@ -293,6 +351,36 @@ jQuery(document).ready(function($) {
         $hiddenFileInput.click(); // Викликаємо клік на прихованому полі
     });
 
+    // ІНТЕГРОВАНО: Drag & Drop обробники на контейнері (активні тільки якщо формат обрано)
+    $quantitiesParent.on('dragover dragenter', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'copy';
+        $(this).addClass('drag-over');
+    }).on('dragleave dragend', function(e) {
+        e.preventDefault();
+        $(this).removeClass('drag-over');
+    }).on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('drag-over');
+        
+        const selectedFormat = $formatSelect.val();
+        const droppedFiles = e.originalEvent.dataTransfer.files;
+        
+        clearMessages();
+
+        if (!selectedFormat) {
+            displayMessage('Будь ласка, спочатку оберіть формат фото.', 'warning');
+            return;
+        }
+        if (droppedFiles.length + accumulatedFiles.files.length > maxFilesPerUpload) {
+            displayMessage('Максимум ' + maxFilesPerUpload + ' файлів дозволено за одне завантаження.', 'error');
+            return;
+        }
+        
+        // ІНТЕГРОВАНО: Append і рендер з дропнутих файлів
+        renderFileQuantities(droppedFiles);
+    });
+
     // 1. При виборі формату (очищаємо поле файлів та оновлюємо підсумок)
     $formatSelect.on('change', function() {
         const selectedFormat = $(this).val();
@@ -302,7 +390,7 @@ jQuery(document).ready(function($) {
         $hiddenFileInput[0].files = accumulatedFiles.files;
         
         // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання (повторний рендеринг)
-        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
         $('#ppo-add-photos-link').on('click', function(e) {
             e.preventDefault();
             $hiddenFileInput.click();
@@ -319,7 +407,7 @@ jQuery(document).ready(function($) {
 
     // Приховуємо підсумки та попередження (це робить updateCurrentUploadSummary)
     updateCurrentUploadSummary();
-});
+    });
 
     // 2. При виборі файлів (рендеримо поля копій з append)
     $hiddenFileInput.on('change', function() { // !!! ОНОВЛЕНО: Обробляємо нове поле
@@ -352,7 +440,7 @@ jQuery(document).ready(function($) {
         $formatSelect.val(''); 
         
         // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання
-        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото</p>');
+        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
         $('#ppo-add-photos-link').on('click', function(e) {
             e.preventDefault();
             $hiddenFileInput.click();
@@ -373,7 +461,7 @@ jQuery(document).ready(function($) {
     });
 
 
-    // 4. Обробка відправки форми (AJAX)
+    // 4. Обробка відправки форми (AJAX) — ФІКС ПРОГРЕСУ
     $form.on('submit', function(e) {
         e.preventDefault();
 
@@ -383,9 +471,15 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        $loader.show();
+        // ФІКС: Приховуємо спінер, показуємо тільки прогрес-бар
+        $loader.hide();
         $submitButton.prop('disabled', true);
         clearMessages();
+
+        // ФІКС: Ініціалізуємо прогрес-бар
+        $progressContainer.show();
+        $progressFill.width('0%').removeClass('processing');  // Видаляємо клас "обробки"
+        $progressText.text('0%').removeClass('processing-text');
 
         // Збираємо дані форми
         const formData = new FormData();
@@ -405,7 +499,7 @@ jQuery(document).ready(function($) {
         });
         formData.append('copies', JSON.stringify(copiesArray)); 
         
-        // AJAX запит
+        // AJAX запит з прогресом
         $.ajax({
             url: ajaxUrl,
             type: 'POST',
@@ -413,8 +507,40 @@ jQuery(document).ready(function($) {
             processData: false,
             contentType: false,
             dataType: 'json',
+            xhr: function() {  // ФІКС: Відстеження тільки upload-прогресу
+                const xhr = new window.XMLHttpRequest();
+                let uploadComplete = false;  // Флаг для переходу в "обробку"
+                
+                xhr.upload.addEventListener('progress', function(evt) {
+                    if (evt.lengthComputable) {
+                        const percent = Math.round((evt.loaded / evt.total) * 100);
+                        $progressFill.width(percent + '%');
+                        $progressText.text(percent + '%');
+                        
+                        // ФІКС: Після 100% upload — перехід в "обробку"
+                        if (percent >= 100 && !uploadComplete) {
+                            uploadComplete = true;
+                            $progressFill.width('100%').addClass('processing');  // Фіксуємо 100% + анімація
+                            $progressText.text('Завантажено! Обробка на сервері...').addClass('processing-text');
+                        }
+                    }
+                }, false);
+                
+                // Опціонально: Відстеження download (response) — якщо сервер великий
+                xhr.addEventListener('progress', function(evt) {
+                    if (evt.lengthComputable && uploadComplete) {
+                        // Тут можна додати логіку для response-прогресу, але зазвичай мінімально
+                        const percent = 100 + Math.round((evt.loaded / evt.total) * 10);  // Бонус 10% для response
+                        if (percent > 100) $progressFill.width('100%');
+                    }
+                }, false);
+                
+                return xhr;
+            },
             success: function(response) {
-                $loader.hide();
+                // ФІКС: Ховаємо прогрес-бар в success
+                $progressContainer.hide();
+                
                 // НОВЕ: Очищуємо accumulated після успіху (файли збережено на сервері)
                 accumulatedFiles = new DataTransfer();
                 $hiddenFileInput[0].files = accumulatedFiles.files;
@@ -422,7 +548,8 @@ jQuery(document).ready(function($) {
                 $formatSelect.val(''); // Очищуємо вибір формату
                 
                 if (response.success) {
-                    displayMessage(response.data.message, 'success');
+                    // ІНТЕГРОВАНО: Показуємо success в модалі (замість displayMessage)
+                    showModal(response.data.message);
                     
                     // Оновлення глобальної сесії JS
                     sessionFormats = response.data.formats;
@@ -444,7 +571,8 @@ jQuery(document).ready(function($) {
                 $quantitiesParent.hide(); // !!! ПРИХОВУЄМО КОНТЕЙНЕР
             },
             error: function(xhr, status, error) {
-                $loader.hide();
+                // ФІКС: Ховаємо прогрес-бар при помилці
+                $progressContainer.hide();
                 const errorMessage = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message 
                                                      ? xhr.responseJSON.data.message 
                                                      : 'Помилка завантаження. Перевірте консоль.';

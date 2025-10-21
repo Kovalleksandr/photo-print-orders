@@ -27,6 +27,22 @@ function ppo_render_order_form() {
                 <div class="ppo-message ppo-message-success"><p>Замовлення збережено! Додайте ще фото або оформіть доставку.</p></div>
             <?php endif; ?>
         </div>
+
+                <!-- ІНТЕГРОВАНО: Модальне вікно для успіху (розміщено поза контейнером для повного оверлею сторінки) -->
+        <div id="ppo-success-modal" class="ppo-modal" style="display: none;">
+            <div class="ppo-modal-content">
+                <div class="ppo-modal-header">
+                    <h2>Успіх!</h2>
+                    <span class="ppo-modal-close">&times;</span>
+                </div>
+                <div class="ppo-modal-body">
+                    <p id="ppo-modal-message"></p>
+                </div>
+                <div class="ppo-modal-footer">
+                    <button id="ppo-modal-ok" class="ppo-button ppo-button-primary">OK</button>
+                </div>
+            </div>
+        </div>
         
         
         <p>мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
@@ -76,6 +92,15 @@ function ppo_render_order_form() {
                 <div class="ppo-buttons-in-quantities">
                     <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
                     <div id="ppo-loader" class="ppo-loader"></div>
+                    
+                    <!-- ІНТЕГРОВАНО: Прогрес-бар для AJAX-завантаження (після loader) -->
+                    <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
+                        <div id="ppo-progress-bar" class="ppo-progress-bar">
+                            <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
+                        </div>
+                        <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
+                    </div>
+                    
                     <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
                 </div>
             </div>
@@ -94,7 +119,7 @@ function ppo_render_order_form() {
             }
             ?>
             <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
-                <h3>Додані формати:</h3>
+                <h3>Деталі замовлення:</h3>
                 <ul id="ppo-formats-list" class="ppo-formats-list">
                     <?php if ($has_order): ?>
                         <?php 
@@ -115,13 +140,15 @@ function ppo_render_order_form() {
                 <div class="ppo-buttons-container">
                     <form method="post" style="display: inline;">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
-                        <input type="submit" name="ppo_go_to_delivery" value="Оформити доставку" class="ppo-button ppo-button-primary">
+                        <input type="submit" name="ppo_go_to_delivery" value="Оформіть доставку" class="ppo-button ppo-button-primary">
                     </form>
                     <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">Видалити замовлення</a>
                 </div>
             </div>
         </div>
     </div>
+
     <?php
+    
     return ob_get_clean();
 }

@@ -101,17 +101,45 @@ function ppo_ajax_file_upload() {
                 throw new \Exception("Файл '{$filename}' має недопустимий тип: {$file_type}. Дозволено: " . implode(', ', ALLOWED_MIME_TYPES));
             }
 
-            // НОВЕ: Створення підпапки за кількістю копій для цього файлу (e.g., '1', '12')
-            $copies_folder_name = (string) $copies;  // "1", "12" тощо
-            $copies_folder_path = $cdn_uploader->create_folder($copies_folder_name, $full_format_path);
+            // ФІКС: Генеруємо унікальне ім'я файлу для уникнення конфлікту "File exists"
+            $original_filename = $filename;
+            $unique_suffix = 0;
+            $cdn_file_info = null;
+            do {
+                if ($unique_suffix > 0) {
+                    $path_info = pathinfo($original_filename);
+                    $filename = $path_info['filename'] . '_' . $unique_suffix . '.' . $path_info['extension'];
+                }
+                
+                // НОВЕ: Створення підпапки за кількістю копій для цього файлу (e.g., '1', '12')
+                $copies_folder_name = (string) $copies;  // "1", "12" тощо
+                $copies_folder_path = $cdn_uploader->create_folder($copies_folder_name, $full_format_path);
 
-            // ДЕБАГ: Логування для кожної підпапки
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("PPO AJAX Debug: Copies for file " . $i . " = '" . $copies . "', Copies Folder Name = '" . $copies_folder_name . "', Copies Path = '" . $copies_folder_path . "'");
-            }
+                // ДЕБАГ: Логування для кожної підпапки
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("PPO AJAX Debug: Copies for file " . $i . " = '" . $copies . "', Copies Folder Name = '" . $copies_folder_name . "', Copies Path = '" . $copies_folder_path . "'");
+                }
 
-            // Завантаження файлу на CDN у copies-папку
-            $cdn_file_info = $cdn_uploader->upload_file($tmp_name, $filename, $copies_folder_path);
+                try {
+                    // Завантаження файлу на CDN у copies-папку
+                    $cdn_file_info = $cdn_uploader->upload_file($tmp_name, $filename, $copies_folder_path);
+                    break;  // Успішно — виходимо з циклу
+                } catch (\Exception $upload_error) {
+                    // ФІКС: Перевіряємо, чи помилка "File exists"
+                    $error_details = json_decode($upload_error->getMessage(), true) ?? [];
+                    if (isset($error_details['error']) && $error_details['error'] === 'File exists') {
+                        $unique_suffix++;
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("PPO AJAX Debug: File exists for '{$filename}', retrying with suffix {$unique_suffix}");
+                        }
+                        if ($unique_suffix > 5) {  // Ліміт спроб (5)
+                            throw new \Exception("Не вдалося завантажити файл '{$original_filename}': файл існує з усіма можливими суфіксами.");
+                        }
+                    } else {
+                        throw $upload_error;  // Інша помилка — пробиваємо
+                    }
+                }
+            } while ($cdn_file_info === null);
             
             // ДЕБАГ: Логування для кожного файлу
             if (defined('WP_DEBUG') && WP_DEBUG) {

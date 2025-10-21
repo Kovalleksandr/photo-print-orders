@@ -184,3 +184,128 @@
     padding-bottom: 5px;
     margin-bottom: 15px;
 }
+
+/* ІНТЕГРОВАНО: Стилі для прогрес-бару */
+.ppo-order-form-container .ppo-progress-container { 
+    width: 100%; 
+    margin: 10px 0; 
+}
+.ppo-order-form-container .ppo-progress-bar { 
+    width: 100%; 
+    height: 10px; 
+    background: #f0f0f0; 
+    border-radius: 5px; 
+    overflow: hidden; 
+}
+.ppo-order-form-container .ppo-progress-fill { 
+    width: 0%; 
+    height: 100%; 
+    background: #0073aa; 
+    transition: width 0.3s ease; 
+}
+.ppo-order-form-container .ppo-progress-text { 
+    display: block; 
+    text-align: center; 
+    margin-top: 5px; 
+    font-size: 14px; 
+    color: #0073aa; 
+}
+
+/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) */
+.ppo-order-form-container .ppo-quantities-container.drag-over { 
+    border: 2px dashed #0073aa; 
+    background: #f9f9f9; 
+    padding: 20px; 
+    text-align: center; 
+    border-radius: 4px; 
+}
+.ppo-order-form-container .ppo-quantities-container.drag-over p { 
+    color: #0073aa; 
+    font-size: 16px; 
+}
+
+/* ФІКС: Анімація для "обробки" після upload */
+.ppo-progress-fill.processing {
+    animation: pulse 1.5s infinite;  /* Пульсація лінії */
+}
+.ppo-progress-text.processing-text {
+    animation: pulse 1.5s infinite;  /* Пульсація тексту */
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* ІНТЕГРОВАНО: Стилі для модального вікна (оновлено: плавне затухання та компактність) */
+.ppo-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;  /* ФІКС: Плавне затухання фону */
+}
+.ppo-modal.show {  /* Клас для показу з fade-in */
+    opacity: 1;
+}
+.ppo-modal-content {
+    background-color: #fefefe;
+    margin: 5% auto 0;  /* ФІКС: Зверху (5% від top), горизонтальний центр */
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 400px;  /* ФІКС: Компактніше (було 500px) */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transform: translateY(-20px);  /* Початкова позиція для анімації */
+    transition: transform 0.3s ease, opacity 0.3s ease;  /* ФІКС: Плавна анімація */
+    opacity: 0;
+}
+.ppo-modal.show .ppo-modal-content {  /* Fade-in для контенту */
+    transform: translateY(0);
+    opacity: 1;
+}
+.ppo-modal-header {
+    padding: 12px;  /* ФІКС: Менше відступів (було 16px) */
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ppo-modal-header h2 {
+    margin: 0;
+    color: #0073aa;
+    font-size: 18px;  /* ФІКС: Менший шрифт для компактності */
+}
+.ppo-modal-close {
+    color: #aaa;
+    font-size: 24px;  /* ФІКС: Трохи менше */
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+.ppo-modal-close:hover {
+    color: #000;
+}
+.ppo-modal-body {
+    padding: 12px;  /* ФІКС: Менше відступів */
+    text-align: center;
+}
+.ppo-modal-body p {
+    margin: 0;
+    font-size: 14px;  /* ФІКС: Компактний шрифт */
+    line-height: 1.4;
+}
+.ppo-modal-footer {
+    padding: 12px;  /* ФІКС: Менше відступів */
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+body.ppo-modal-open {
+    overflow: hidden;  /* Блокуємо скрол */
+}
