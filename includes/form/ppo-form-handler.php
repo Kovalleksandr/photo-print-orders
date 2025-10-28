@@ -31,6 +31,7 @@ function ppo_handle_forms() {
  * Обробка переходу до доставки (перевірка наявності мінімального замовлення).
  */
 function ppo_handle_go_to_delivery() {
+    // ... (Логіка залишається без змін) ...
     if (!isset($_SESSION['ppo_formats']) || empty(array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'))) {
         $error_message = urlencode('Ви не додали жодного формату фотографій до замовлення.');
         wp_redirect(esc_url(home_url('/order/')) . '?error=' . $error_message);
@@ -56,33 +57,83 @@ function ppo_handle_go_to_delivery() {
 function ppo_handle_delivery_submission() {
     check_admin_referer('ppo_delivery_nonce', 'ppo_nonce');
     
-    $address = sanitize_textarea_field($_POST['address'] ?? '');
+    $delivery_method = sanitize_text_field($_POST['delivery_method'] ?? 'nova_poshta');
+    $error_message = '';
+    $delivery_data = [];
 
-    if (empty($address)) {
-        $error_message = urlencode('Будь ласка, вкажіть адресу доставки.');
-        wp_redirect(esc_url(home_url('/orderpagedelivery/')) . '?error=' . $error_message);
+    // Зберігаємо метод доставки в сесію
+    $_SESSION['ppo_delivery_method'] = $delivery_method;
+
+    // У функції ppo_handle_delivery_submission() — заміна блоку для 'nova_poshta'
+    if ($delivery_method === 'nova_poshta') {
+        $city_ref = sanitize_text_field($_POST['np_city_ref'] ?? '');
+        $city = sanitize_text_field($_POST['np_city'] ?? '');
+        $street_ref = sanitize_text_field($_POST['np_street_ref'] ?? '');
+        $street = sanitize_text_field($_POST['np_street'] ?? '');
+        $division_id = sanitize_text_field($_POST['np_division_id'] ?? '');
+        $division_ref = sanitize_text_field($_POST['np_division_ref'] ?? '');
+        $division = sanitize_text_field($_POST['np_division'] ?? '');
+        $recipient_name = sanitize_text_field($_POST['np_recipient_name'] ?? '');
+        $recipient_phone = sanitize_text_field($_POST['np_recipient_phone'] ?? '');
+
+        if (empty($city_ref) || empty($division_id) || empty($recipient_name) || empty($recipient_phone)) {
+            $error_message = 'Заповніть усі поля для Нової Пошти.';
+        } else {
+            // Розрахунок вартості (приклад: вага 0.5 кг для фото)
+            $api = new PPO_NovaPoshta_API();
+            $cost_result = $api->calculate_delivery_cost($city_ref, $division_ref, 0.5, '0.001');
+            $delivery_cost = $cost_result['success'] ? ($cost_result['data']['cost'] ?? 70) : 70;  // Фікс 70 грн якщо помилка
+
+            // Додаємо до сесії total
+            $_SESSION['ppo_total'] += $delivery_cost;
+            $_SESSION['ppo_delivery_cost'] = $delivery_cost;
+
+            $delivery_data = [
+                'method' => 'Нова Пошта',
+                'np_city_ref' => $city_ref,
+                'np_city' => $city,
+                'np_street_ref' => $street_ref,
+                'np_street' => $street,
+                'np_division_id' => $division_id,
+                'np_division_ref' => $division_ref,
+                'np_division' => $division,
+                'np_recipient_name' => $recipient_name,
+                'np_recipient_phone' => $recipient_phone,
+                'cost' => $delivery_cost,
+                'details' => "Місто: {$city}, " . ($street ? "Вулиця: {$street}, " : '') . "Відділення: {$division}, Одержувач: {$recipient_name}, Тел: {$recipient_phone}, Вартість: {$delivery_cost} грн",
+            ];
+        }
+    } else {
+        // ... (інші методи без змін)
+    }
+
+    // Збереження в сесію та редірект (як раніше)
+    if (!empty($error_message)) {
+        wp_redirect(home_url('/orderpagedelivery/') . '?error=' . urlencode($error_message));
+        exit;
+    }
+    $_SESSION['ppo_delivery_data'] = $delivery_data;
+    $_SESSION['ppo_delivery_address'] = $delivery_data['details'];
+    wp_redirect(home_url('/orderpagepayment/'));
+    exit;
+
+        // Зберігаємо уніфікований масив даних доставки в сесію
+        $_SESSION['ppo_delivery_data'] = $delivery_data;
+        // Оновлюємо старе поле (щоб не ламати старий код, який його може використовувати)
+        $_SESSION['ppo_delivery_address'] = $delivery_data['details'] ?? 'Не вказано';
+
+
+        // Перенаправлення на сторінку оплати
+        wp_redirect(esc_url(home_url('/orderpagepayment/')));
         exit;
     }
 
-    $_SESSION['ppo_delivery_address'] = $address;
-
-    // Перенаправлення на сторінку оплати
-    wp_redirect(esc_url(home_url('/orderpagepayment/')));
-    exit;
-}
-
-/**
- * Обробка форми оплати/підтвердження (Крок 3).
- * Створює запис у CPT і очищає сесію.
- */
-// ====================================================================
-// 7. ОБРОБКА КРОКУ 3: ОПЛАТА
-// ====================================================================
 /**
  * Обробка форми оплати/підтвердження (Крок 3).
  * Створює запис у CPT і очищає сесію.
  */
 function ppo_handle_payment_submission() {
+    // ... (Логіка залишається без змін) ...
     // ФІКС: Перевірка на наявність POST (щоб уникнути виклику без форми)
     if (!isset($_POST['ppo_submit_payment']) || !isset($_POST['ppo_nonce']) || !wp_verify_nonce($_POST['ppo_nonce'], 'ppo_payment_nonce')) {
         return; // Вихід, якщо запит недійсний
@@ -116,15 +167,18 @@ function ppo_handle_payment_submission() {
         ]);
 
         // Уніфікований масив даних для meta (всі поля в одному місці)
+        $delivery_data = $_SESSION['ppo_delivery_data'] ?? ['details' => 'Не вказано']; // !!! ВИКОРИСТАННЯ НОВИХ ДАНИХ НП
+
         $order_data = [
             'order_id' => $order_id,
             'total' => $total_sum,
-            'timestamp' => current_time('mysql'),  // ФІКС: Додаємо дату/час
-            'status' => 'pending_payment',  // ФІКС: Зберігаємо статус у meta
-            'delivery_address' => $_SESSION['ppo_delivery_address'] ?? 'Не вказано',
+            'timestamp' => current_time('mysql'), 
+            'status' => 'pending_payment', 
+            'delivery_method' => $_SESSION['ppo_delivery_method'] ?? 'bank_transfer', // !!! ЗБЕРІГАЄМО МЕТОД
+            'delivery_data' => $delivery_data, // !!! ЗБЕРІГАЄМО ДЕТАЛЬНІ ДАНІ
             'payment_method' => $payment_method,
-            'formats' => $_SESSION['ppo_formats'] ?? [],  // Формати з сесії
-            'order_folder_path' => $_SESSION['ppo_formats']['order_folder_path'] ?? (PPO_CDN_ROOT_PATH . $order_id . '/'),  // ФІКС: CDN шлях
+            'formats' => $_SESSION['ppo_formats'] ?? [], 
+            'order_folder_path' => $_SESSION['ppo_formats']['order_folder_path'] ?? (PPO_CDN_ROOT_PATH . $order_id . '/'), 
         ];
 
         if (!empty($existing_posts)) {
@@ -162,8 +216,8 @@ function ppo_handle_payment_submission() {
             }
             
             // ФІКС: Зберігаємо уніфікований meta (включаючи order_id для пошуку)
-            update_post_meta($post_id, 'ppo_order_id', $order_id);  // Окремо для пошуку
-            update_post_meta($post_id, 'ppo_order_data', $order_data);  // Усе в одному
+            update_post_meta($post_id, 'ppo_order_id', $order_id); 
+            update_post_meta($post_id, 'ppo_order_data', $order_data); 
             
             // ДЕБАГ: Логування створення
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -180,7 +234,7 @@ function ppo_handle_payment_submission() {
     // 2. Логіка перенаправлення/оплати
     
     if ($payment_method === 'card') {
-        // Ініціалізуємо LiqPay
+        // ... (Логіка LiqPay залишається без змін) ...
         $liqpay = new PPO_LiqPay(LIQPAY_PUBLIC_KEY, LIQPAY_PRIVATE_KEY);
 
         // Параметри платежу LiqPay
@@ -218,13 +272,11 @@ function ppo_handle_payment_submission() {
         unset($_SESSION['ppo_formats']);
         unset($_SESSION['ppo_total']);
         unset($_SESSION['ppo_delivery_address']);
+        unset($_SESSION['ppo_delivery_method']); // !!! ОЧИЩЕННЯ НОВИХ ПОЛІВ
+        unset($_SESSION['ppo_delivery_data']); // !!! ОЧИЩЕННЯ НОВИХ ПОЛІВ
         
         wp_redirect(esc_url(home_url('/orderpagepayment/')) . '?success=bank_transfer_submitted');
         exit;
     }
 }
-
-// ФІКС: Видалено add_action('wp_loaded', 'ppo_handle_payment_submission'); — це викликало помилку на кожному init без POST
-// Тепер payment обробляється тільки через ppo_handle_forms на 'init' з перевіркою isset($_POST['ppo_submit_payment'])
-// ФІКС: Видалено add_action('wp_loaded', 'ppo_handle_payment_submission'); — це викликало помилку на кожному init без POST
-// Тепер payment обробляється тільки через ppo_handle_forms на 'init' з перевіркою isset($_POST['ppo_submit_payment'])
+add_action('init', 'ppo_handle_forms');

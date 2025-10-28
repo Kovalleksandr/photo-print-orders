@@ -22,16 +22,18 @@ define('PPO_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Завантаження конфігурації, класу CDN та допоміжних класів/функцій
 require_once PPO_PLUGIN_DIR . 'ppo-config.php';
 require_once PPO_PLUGIN_DIR . 'ppo-cdn-express-uploader.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-number-generator.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-cpt-orders.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-ajax-cdn-handler.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-form-handler.php';
+require_once PPO_PLUGIN_DIR . 'includes/order/ppo-number-generator.php';
+require_once PPO_PLUGIN_DIR . 'includes/admin/ppo-cpt-orders.php';
+require_once PPO_PLUGIN_DIR . 'includes/cdn/ppo-ajax-cdn-handler.php';
+require_once PPO_PLUGIN_DIR . 'includes/form/ppo-form-handler.php';
 
 // Завантаження функцій рендерингу (для шорткодів)
-require_once PPO_PLUGIN_DIR . 'includes/ppo-render-order.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-render-delivery.php';
-require_once PPO_PLUGIN_DIR . 'includes/ppo-render-payment.php';
+require_once PPO_PLUGIN_DIR . 'includes/order/ppo-render-order.php';
+require_once PPO_PLUGIN_DIR . 'includes/delivery/ppo-render-delivery.php';
+require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-render-payment.php';
 
+// Файли для інтеграції Нової Пошти
+require_once PPO_PLUGIN_DIR . 'includes/delivery/ppo-novaposhta-ajax.php';
 
 // ====================================================================
 // 2. УПРАВЛІННЯ СЕСІЯМИ ТА ОЧИЩЕННЯМ
@@ -88,9 +90,11 @@ function ppo_enqueue_scripts() {
     // ФІКС: Enqueue CSS тільки на сторінках з PPO шорткодами (оптимізація)
     global $post;
     $has_ppo_shortcode = false;
+    
     if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ppo_order_form')) {
         $has_ppo_shortcode = true;
     }
+
     if ($has_ppo_shortcode) {
         wp_enqueue_style(
             'ppo-forms',
@@ -100,10 +104,23 @@ function ppo_enqueue_scripts() {
         );
     }
 
+    // Підключення скрипта Нової Пошти лише на сторінці доставки
+    if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ppo_delivery_form')) {
+        wp_enqueue_script('jquery-ui-autocomplete');
+        wp_enqueue_script(
+            'ppo-nova-poshta-script', 
+            PPO_PLUGIN_URL . 'includes/delivery/ppo-nova-poshta-script.js', 
+            ['jquery', 'jquery-ui-autocomplete'], 
+            filemtime(PPO_PLUGIN_DIR . 'includes/delivery/ppo-nova-poshta-script.js'), 
+            true
+        );
+    }
+
     // Передача даних PHP в JavaScript (Локалізація)
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
         'ajax_url'          => admin_url('admin-ajax.php'),
         'nonce'             => wp_create_nonce('ppo_file_upload_nonce'),
+        'np_nonce'          => wp_create_nonce('ppo_np_nonce'),
         'min_sum'           => MIN_ORDER_SUM,
         'prices'            => PHOTO_PRICES,
         'max_files'         => MAX_FILES_PER_UPLOAD,
@@ -111,6 +128,14 @@ function ppo_enqueue_scripts() {
         'session_formats'   => isset($_SESSION['ppo_formats']) ? array_filter($_SESSION['ppo_formats'], 'is_array') : new stdClass(),
         'session_total'     => $_SESSION['ppo_total'] ?? 0,
     ]);
+
+    // Локалізація для скрипта Нової Пошти
+    if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'ppo_delivery_form')) {
+        wp_localize_script('ppo-nova-poshta-script', 'ppo_ajax', [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ppo_np_nonce')
+        ]);
+    }
 }
 add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 
@@ -121,6 +146,7 @@ add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 add_shortcode('ppo_order_form', 'ppo_render_order_form');
 add_shortcode('ppo_delivery_form', 'ppo_render_delivery_form');
 add_shortcode('ppo_payment_form', 'ppo_render_payment_form');
+
 // ====================================================================
 // ІНІЦІАЛІЗАЦІЯ ФУНКЦІЙ З ІНШИХ ФАЙЛІВ
 // ====================================================================
@@ -133,15 +159,29 @@ add_action('wp_ajax_nopriv_ppo_file_upload', 'ppo_ajax_file_upload');
 // Реєстрація обробників форм POST
 add_action('init', 'ppo_handle_forms');
 
+// AJAX-обробники для Нової Пошти
+add_action('wp_ajax_ppo_np_search_settlements', 'ppo_handle_np_ajax');
+add_action('wp_ajax_nopriv_ppo_np_search_settlements', 'ppo_handle_np_ajax');
+add_action('wp_ajax_ppo_np_search_streets', 'ppo_handle_np_ajax');
+add_action('wp_ajax_nopriv_ppo_np_search_streets', 'ppo_handle_np_ajax');
+add_action('wp_ajax_ppo_np_get_divisions', 'ppo_handle_np_ajax');
+add_action('wp_ajax_nopriv_ppo_np_get_divisions', 'ppo_handle_np_ajax');
 
 // ====================================================================
-// 5. Клас LiqPay
+// 5. АДМІН-СТОРІНКА ДЛЯ НАЛАШТУВАНЬ API НОВОЇ ПОШТИ
 // ====================================================================
 
-require_once PPO_PLUGIN_DIR . 'includes/ppo-liqpay-class.php';
+add_action('admin_menu', 'ppo_add_np_settings');
+function ppo_add_np_settings() {
+    add_submenu_page('options-general.php', 'Нова Пошта', 'Нова Пошта', 'manage_options', 'ppo-np-settings', 'ppo_np_settings_page');
+}
 
 
+// ====================================================================
+// 6. Клас LiqPay
+// ====================================================================
 
+require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-liqpay-class.php';
 
 // ====================================================================
 // 9. LIQPAY CALLBACK ENDPOINT (ОБРОБКА СТАТУСУ ПЛАТЕЖУ)
