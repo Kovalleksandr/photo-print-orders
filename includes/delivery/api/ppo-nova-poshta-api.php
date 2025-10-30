@@ -69,16 +69,13 @@ class PPO_NovaPoshta_API {
      * @param string $city_ref Ref міста.
      * @return array
      */
-    public function getWarehousesByCityRef($city_ref) {
+    public function getWarehousesByCityRef($settlement_ref) {
+        // Властивості містять лише Ref міста
         $properties = [
-            'CityRef' => $city_ref,
+            'SettlementRef' => $settlement_ref,
+
         ];
         
-        // ✅ ВИПРАВЛЕННЯ: Додаємо TypeOfWarehouseRef лише якщо константа визначена і не null
-        if (defined('NOVA_POSHTA_WAREHOUSE_TYPES') && NOVA_POSHTA_WAREHOUSE_TYPES) {
-            $properties['TypeOfWarehouseRef'] = NOVA_POSHTA_WAREHOUSE_TYPES;
-        }
-
         $request = [
             'apiKey'       => $this->api_key,
             'modelName'    => 'AddressGeneral', 
@@ -88,6 +85,5 @@ class PPO_NovaPoshta_API {
         
         return $this->sendRequest($request);
     }
-
     // Тут можна додати інші методи API, наприклад, для розрахунку вартості доставки.
 }

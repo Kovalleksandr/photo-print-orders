@@ -64,7 +64,7 @@ function ppo_handle_np_ajax() {
                 $results = [];
                 
                 foreach ($api_response['data'] as $warehouse) {
-                    if (empty($term) || stripos($warehouse['Description'], $term) !== false || stripos($warehouse['ShortAddress'], $term) !== false) {
+                    if (empty($term) || stripos($warehouse['DescriptionRu'] ?? $warehouse['Description'], $term) !== false || stripos($warehouse['ShortAddressRu'] ?? $warehouse['ShortAddress'], $term) !== false) {
                         $results[] = [
                             'label' => $warehouse['Description'] . ' (' . $warehouse['ShortAddress'] . ')',
                             'value' => $warehouse['Ref'], 
@@ -74,7 +74,7 @@ function ppo_handle_np_ajax() {
                 }
                 $response_data = $results;
             } else {
-                $response_data = [];
+                $response_data = $api_response; // Зберігаємо повну відповідь, щоб log працював
             }
         }
     }
