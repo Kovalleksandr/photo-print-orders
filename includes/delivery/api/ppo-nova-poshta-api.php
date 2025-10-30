@@ -72,8 +72,12 @@ class PPO_NovaPoshta_API {
     public function getWarehousesByCityRef($city_ref) {
         $properties = [
             'CityRef' => $city_ref,
-            'TypeOfWarehouseRef' => NOVA_POSHTA_WAREHOUSE_TYPES // Фільтруємо за типом, якщо константа визначена
         ];
+        
+        // ✅ ВИПРАВЛЕННЯ: Додаємо TypeOfWarehouseRef лише якщо константа визначена і не null
+        if (defined('NOVA_POSHTA_WAREHOUSE_TYPES') && NOVA_POSHTA_WAREHOUSE_TYPES) {
+            $properties['TypeOfWarehouseRef'] = NOVA_POSHTA_WAREHOUSE_TYPES;
+        }
 
         $request = [
             'apiKey'       => $this->api_key,
