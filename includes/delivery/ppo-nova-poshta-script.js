@@ -1,92 +1,120 @@
-// Оновлений includes\delivery\ppo-nova-poshta-script.js
-// Додано fallback для полів v2.0 (Present як Description, але оскільки API нормалізує, зміни мінімальні)
+// includes/delivery/ppo-nova-poshta-script.js
+
 jQuery(document).ready(function($) {
-    var ajaxurl = ppo_ajax.ajaxurl;
-    var nonce = ppo_ajax.nonce;
+    var $cityInput = $('#np-city-name');
+    var $cityRef = $('#np-city-ref');
+    var $cityHiddenName = $('#np-city-name-hidden');
+    var $warehouseInput = $('#np-warehouse-name');
+    var $warehouseRef = $('#np-warehouse-ref');
 
-    // Автокомпліт міста
-    $('#ppo_np_city').autocomplete({
+    // ----------------------------------------------------
+    // 1. Autocomplete для Населеного пункту (Міста)
+    // ----------------------------------------------------
+    $cityInput.autocomplete({
+        minLength: 2,
         source: function(request, response) {
-            $.post(ajaxurl, {
-                action: 'ppo_np_search_settlements',
-                query: request.term,
-                nonce: nonce
-            }, function(data) {
-                if (data.success) {
-                    response($.map(data.data, function(item) {
-                        return {
-                            label: item.Description || item.Present || item.name,  // Fallback для v2.0
-                            value: item.Description || item.Present || item.name,
-                            ref: item.Ref || item.ref
-                        };
-                    }));
+            $cityRef.val(''); // Очищаємо Ref при введенні нового тексту
+            $warehouseInput.val('').prop('disabled', true); // Вимикаємо поле відділення
+            $warehouseRef.val('');
+
+            $.ajax({
+                url: ppo_np_ajax.ajaxurl,
+                type: 'post',
+                dataType: 'json',
+                data: {
+                    action: 'ppo_np_search_settlements', // Хук, визначений у PHP
+                    action_type: 'searchSettlements',   // Внутрішній тип дії
+                    nonce: ppo_np_ajax.nonce,
+                    term: request.term 
+                },
+                success: function(data) {
+                    if (data.success === false) {
+                         // Обробка помилки від PHP (наприклад, API Error)
+                         response([]);
+                         console.error('NP City Search Error:', data.data.details);
+                    } else {
+                        response(data);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error (City Search):", status, error);
+                    response([]);
                 }
             });
         },
         select: function(event, ui) {
-            $('#ppo_np_city_ref').val(ui.item.ref);
-            $('#ppo_np_street').val('');
-            $('#ppo_np_division').html('<option value="">Оберіть відділення</option>');
-            loadDivisions(ui.item.ref);
+            // Встановлюємо Ref та назву міста
+            $cityRef.val(ui.item.value); 
+            $cityHiddenName.val(ui.item.city_name); 
+
+            // Дозволяємо пошук відділень
+            $warehouseInput.prop('disabled', false).focus();
+            
+            // Відображаємо label, а не value
+            $(this).val(ui.item.city_name); 
+
+            return false;
         }
     });
 
-    // Автокомпліт вулиці
-    $('#ppo_np_street').autocomplete({
+    // ----------------------------------------------------
+    // 2. Autocomplete для Відділення
+    // ----------------------------------------------------
+    $warehouseInput.autocomplete({
+        minLength: 1,
         source: function(request, response) {
-            var cityRef = $('#ppo_np_city_ref').val();
-            if (!cityRef) return;
-            $.post(ajaxurl, {
-                action: 'ppo_np_search_streets',
-                settlement_ref: cityRef,
-                query: request.term,
-                nonce: nonce
-            }, function(data) {
-                if (data.success) {
-                    response($.map(data.data, function(item) {
-                        return {
-                            label: item.Description || item.Present || item.description,
-                            value: item.Description || item.Present || item.description,
-                            ref: item.Ref || item.ref
-                        };
-                    }));
-                }
-            });
-        },
-        select: function(event, ui) {
-            $('#ppo_np_street_ref').val(ui.item.ref);
-        }
-    }).on('focus', function() {
-        if (!$('#ppo_np_city_ref').val()) {
-            alert('Спочатку оберіть місто');
-            $(this).blur();
-        }
-    });
-
-    // Завантаження відділень
-    function loadDivisions(cityRef) {
-        $.post(ajaxurl, {
-            action: 'ppo_np_get_divisions',
-            settlement_ref: cityRef,
-            category: 'PostBranch',
-            nonce: nonce
-        }, function(data) {
-            if (data.success) {
-                var select = $('#ppo_np_division');
-                select.html('<option value="">Оберіть відділення</option>');
-                $.each(data.data, function(i, item) {
-                    var option = $('<option>').val(item.Ref || item.ref).attr('data-id', item.id || item.SiteKey).text((item.number || item.SiteKey || '') + ' - ' + (item.Description || item.name || '') + ' (' + (item.address || item.ShortAddress || '') + ')');
-                    select.append(option);
-                });
-            } else {
-                alert('Помилка завантаження відділень: ' + (data.error || 'Unknown'));
+            var cityRef = $cityRef.val();
+            
+            // Якщо Ref міста не вибраний, пошук відділень неможливий
+            if (!cityRef) {
+                $warehouseInput.val('Спочатку виберіть населений пункт');
+                response([]);
+                return;
             }
-        });
-    }
 
-    // Збереження division_id
-    $('#ppo_np_division').change(function() {
-        var selected = $(this).find('option:selected');
-        $('#ppo_np_division_id').val(selected.data('id'));
+            $warehouseRef.val(''); // Очищаємо Ref відділення при введенні нового тексту
+
+            $.ajax({
+                url: ppo_np_ajax.ajaxurl,
+                type: 'post',
+                dataType: 'json',
+                data: {
+                    action: 'ppo_np_get_divisions', // Хук, визначений у PHP
+                    action_type: 'getWarehouses',    // Внутрішній тип дії
+                    nonce: ppo_np_ajax.nonce,
+                    city_ref: cityRef,
+                    term: request.term // Додатковий термін для фільтрації на сервері (або клієнті)
+                },
+                success: function(data) {
+                    if (data.success === false) {
+                        response([]);
+                        console.error('NP Warehouse Search Error:', data.data.details);
+                    } else {
+                        response(data);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error (Warehouse Search):", status, error);
+                    response([]);
+                }
+            });
+        },
+        select: function(event, ui) {
+            // Встановлюємо Ref відділення
+            $warehouseRef.val(ui.item.value);
+
+            // Відображаємо повну адресу у полі
+            $(this).val(ui.item.label);
+            
+            // Тут можна активувати кнопку відправки форми, якщо потрібно
+            
+            return false;
+        }
+    });
+
+    // Додаємо обробник для відображення назви міста, а не Ref після Autocomplete
+    $cityInput.on('autocompleteselect', function(event, ui) {
+        $(this).val(ui.item.city_name);
+        return false;
     });
 });

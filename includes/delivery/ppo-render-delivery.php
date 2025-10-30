@@ -1,142 +1,175 @@
 <?php
-/**
- * Рендеринг форми доставки (Крок 2: Вибір доставки).
- * Використовується в шорткоді [ppo_delivery_form].
- */
+// includes/delivery/ppo-render-delivery.php
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Шорткод для форми доставки.
+ * Рендерить форму вибору доставки "Нова Пошта".
+ * @return string HTML-форма.
  */
-function ppo_render_delivery_form($atts) {
-    // Ініціалізація сесії (якщо не запущена)
-    if (!session_id()) {
-        session_start();
+function ppo_render_delivery_form() {
+    // Перевірка, чи є активна сесія замовлення (OrderID)
+    if (!isset($_SESSION['ppo_order_id'])) {
+        return '<div class="ppo-delivery-alert ppo-error">Спочатку оформіть замовлення.</div>';
     }
 
-    // Перевірка наявності замовлення в сесії
-    if (!isset($_SESSION['ppo_total']) || $_SESSION['ppo_total'] < MIN_ORDER_SUM) {
-        return '<div class="ppo-error">Помилка: Замовлення не ініціалізовано. <a href="' . esc_url(home_url('/order/')) . '">Повернутися до замовлення</a></div>';
-    }
-
-    // Обробка помилок з URL
-    $error_message = '';
-    if (isset($_GET['error'])) {
-        $error_message = urldecode($_GET['error']);
-    }
+    // Отримання попередньо збережених даних, якщо є
+    $saved_delivery = $_SESSION['ppo_delivery_address'] ?? [];
+    
+    // !!! УВАГА: Використовуємо коректні ключі з сесії для відображення
+    $saved_city_name = $saved_delivery['city_description'] ?? ''; 
+    $saved_city_ref = $saved_delivery['settlement_ref'] ?? '';
+    $saved_warehouse_description = $saved_delivery['warehouse_description'] ?? '';
+    $saved_warehouse_ref = $saved_delivery['warehouse_ref'] ?? '';
 
     ob_start();
     ?>
-    <div class="ppo-delivery-form">
-        <?php if ($error_message): ?>
-            <div class="ppo-error alert alert-danger"><?php echo esc_html($error_message); ?></div>
-        <?php endif; ?>
-
-        <h2>Крок 2: Оформлення доставки</h2>
-        <p>Сума замовлення: <strong><?php echo number_format($_SESSION['ppo_total'], 2); ?> грн</strong></p>
-
-        <form method="post" action="">
-            <input type="hidden" name="ppo_submit_delivery" value="1">
-            <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
-
-            <!-- Вибір методу доставки -->
-            <div class="ppo-field">
-                <label for="delivery_method">Метод доставки:</label>
-                <select name="delivery_method" id="delivery_method" required>
-                    <option value="nova_poshta" selected>Нова Пошта (відділення)</option>
-                    <option value="pickup">Самовивіз з ательє</option>
-                    <option value="other">Інший спосіб (кур'єр/пошта)</option>
-                </select>
+    <div id="ppo-delivery-form-container" class="ppo-form-container">
+        <h2>🚚 Оформлення доставки (Нова Пошта)</h2>
+        <div id="ppo-delivery-alert-messages"></div>
+        
+        <form id="nova-poshta-delivery-form" method="post">
+            
+            <input type="hidden" name="ppo_delivery_nonce" value="<?php echo wp_create_nonce('ppo_delivery_action'); ?>">
+            <input type="hidden" name="action" value="ppo_save_delivery">
+            
+            <div class="ppo-form-group">
+                <label for="np-city-name">Населений пункт:</label>
+                <input 
+                    type="text" 
+                    id="np-city-name" 
+                    name="city_search" 
+                    value="<?php echo esc_attr($saved_city_name); ?>"
+                    placeholder="Почніть вводити назву міста/селища" 
+                    required 
+                    class="ppo-input-field"
+                >
+                <input type="hidden" id="np-city-ref" name="settlement_ref" value="<?php echo esc_attr($saved_city_ref); ?>" required>
+                <input type="hidden" id="np-city-name-hidden" name="np_city_name" value="<?php echo esc_attr($saved_city_name); ?>">
             </div>
 
-            <!-- Блок для Нової Пошти -->
-            <div id="nova_poshta_fields">
-                <?php do_action('ppo_render_delivery'); // Рендерить поля NP ?>
-
-                <!-- Ім'я та телефон одержувача (глобальні для NP) -->
-                <div class="ppo-field">
-                    <label for="np_recipient_name">Ім'я одержувача:</label>
-                    <input type="text" id="np_recipient_name" name="np_recipient_name" placeholder="ПІБ" required>
-                </div>
-                <div class="ppo-field">
-                    <label for="np_recipient_phone">Телефон одержувача:</label>
-                    <input type="tel" id="np_recipient_phone" name="np_recipient_phone" placeholder="+380 XX XXX XX XX" required>
-                </div>
+            <div class="ppo-form-group">
+                <label for="np-warehouse-name">Відділення / Поштомат:</label>
+                <input 
+                    type="text" 
+                    id="np-warehouse-name" 
+                    name="warehouse_search" 
+                    value="<?php echo esc_attr($saved_warehouse_description); ?>"
+                    placeholder="Введіть номер або назву відділення" 
+                    required 
+                    <?php echo empty($saved_city_ref) ? 'disabled' : ''; ?> 
+                    class="ppo-input-field"
+                >
+                <input type="hidden" id="np-warehouse-ref" name="warehouse_ref" value="<?php echo esc_attr($saved_warehouse_ref); ?>" required>
+            </div>
+            
+            <div class="ppo-form-group">
+                <label for="recipient_name">ПІБ отримувача:</label>
+                <input 
+                    type="text" 
+                    id="recipient_name" 
+                    name="recipient_name" 
+                    placeholder="Іванов Іван Іванович" 
+                    required 
+                    class="ppo-input-field"
+                >
             </div>
 
-            <!-- Блок для інших методів -->
-            <div id="other_fields" style="display: none;">
-                <div class="ppo-field">
-                    <label for="delivery_details">Деталі доставки:</label>
-                    <textarea id="delivery_details" name="delivery_details" rows="3" placeholder="Вкажіть адресу, дату/час самовивозу або інструкції для кур'єра" required></textarea>
-                </div>
+            <div class="ppo-form-group">
+                <label for="recipient_phone">Телефон отримувача:</label>
+                <input 
+                    type="tel" 
+                    id="recipient_phone" 
+                    name="recipient_phone" 
+                    placeholder="+380XXXXXXXXX" 
+                    pattern="^\+380\d{9}$"
+                    required 
+                    class="ppo-input-field"
+                >
             </div>
-
-            <div class="ppo-submit">
-                <button type="submit" class="btn btn-primary">Наступний крок: Оплата</button>
-                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="btn btn-secondary">Повернутися до замовлення</a>
-            </div>
+            
+            <button type="submit" id="save-delivery-btn" class="ppo-submit-btn" disabled>
+                Зберегти адресу та перейти до оплати
+            </button>
+            <div id="ppo-delivery-loader" class="ppo-loader" style="display: none;"></div>
         </form>
     </div>
-
-    <script>
-        jQuery(document).ready(function($) {
-            $('#delivery_method').change(function() {
-                if ($(this).val() === 'nova_poshta') {
-                    $('#nova_poshta_fields').show();
-                    $('#other_fields').hide();
-                } else {
-                    $('#nova_poshta_fields').hide();
-                    $('#other_fields').show();
-                }
-            });
-        });
-    </script>
-
-    <style>
-        .ppo-delivery-form { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .ppo-field { margin-bottom: 15px; }
-        .ppo-field label { display: block; font-weight: bold; margin-bottom: 5px; }
-        .ppo-field input, .ppo-field select, .ppo-field textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        .ppo-submit { text-align: center; margin-top: 20px; }
-        .btn { padding: 10px 20px; margin: 0 5px; text-decoration: none; border-radius: 4px; cursor: pointer; border: none; }
-        .btn-primary { background: #007cba; color: white; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .ppo-error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
-        .ui-autocomplete { max-height: 200px; overflow-y: auto; }
-    </style>
     <?php
     return ob_get_clean();
 }
-add_shortcode('ppo_delivery_form', 'ppo_render_delivery_form');
 
 /**
- * Hook для рендерингу полів Нової Пошти (місто, вулиця, відділення).
+ * Обробка POST-запиту на збереження адреси доставки у сесії та оновлення замовлення.
  */
-function ppo_render_delivery_fields() {
-    wp_nonce_field('ppo_np_nonce', 'ppo_np_nonce'); // Nonce для AJAX
-    ?>
-    <div class="ppo-field">
-        <label for="ppo_np_city">Місто:</label>
-        <input type="text" id="ppo_np_city" name="np_city" placeholder="Введіть назву міста" required>
-        <input type="hidden" id="ppo_np_city_ref" name="np_city_ref">
-    </div>
-    <div class="ppo-field">
-        <label for="ppo_np_street">Вулиця (необов'язково):</label>
-        <input type="text" id="ppo_np_street" name="np_street" placeholder="Введіть назву вулиці">
-        <input type="hidden" id="ppo_np_street_ref" name="np_street_ref">
-    </div>
-    <div class="ppo-field">
-        <label for="ppo_np_division">Відділення:</label>
-        <select id="ppo_np_division" name="np_division_ref" required>
-            <option value="">Оберіть після вибору міста</option>
-        </select>
-        <input type="hidden" id="ppo_np_division_id" name="np_division_id">
-    </div>
-    <?php
+function ppo_handle_delivery_form() {
+    if (!isset($_POST['action']) || $_POST['action'] !== 'ppo_save_delivery') {
+        return;
+    }
+    
+    // Перевірка Nonce та наявності ID замовлення
+    if (!isset($_POST['ppo_delivery_nonce']) || !wp_verify_nonce($_POST['ppo_delivery_nonce'], 'ppo_delivery_action') || !isset($_SESSION['ppo_order_id'])) {
+        wp_die('Security check failed or Order ID missing.');
+    }
+    
+    // 1. Очищення та валідація даних
+    $settlement_ref = sanitize_text_field($_POST['settlement_ref'] ?? '');
+    $warehouse_ref = sanitize_text_field($_POST['warehouse_ref'] ?? '');
+    $city_search = sanitize_text_field($_POST['city_search'] ?? '');
+    $warehouse_search = sanitize_text_field($_POST['warehouse_search'] ?? '');
+    $recipient_name = sanitize_text_field($_POST['recipient_name'] ?? '');
+    $recipient_phone = sanitize_text_field($_POST['recipient_phone'] ?? '');
+
+    if (empty($settlement_ref) || empty($warehouse_ref) || empty($recipient_name) || empty($recipient_phone)) {
+        // У реальному житті краще використовувати AJAX для валідації і не wp_die
+        wp_die('Будь ласка, заповніть усі обов\'язкові поля доставки.');
+    }
+
+    // 2. Збереження даних у сесії
+    $_SESSION['ppo_delivery_address'] = [
+        'city_description' => $city_search,
+        'settlement_ref' => $settlement_ref,
+        'warehouse_description' => $warehouse_search,
+        'warehouse_ref' => $warehouse_ref,
+        'recipient_name' => $recipient_name,
+        'recipient_phone' => $recipient_phone,
+    ];
+    
+    // 3. Оновлення посту замовлення (CRITICAL)
+    // Знайдіть пост замовлення за $_SESSION['ppo_order_id']
+    $order_id_code = $_SESSION['ppo_order_id'];
+    $posts = get_posts([
+        'post_type' => 'ppo_order',
+        'meta_key' => 'ppo_order_id',
+        'meta_value' => $order_id_code,
+        'posts_per_page' => 1,
+        'fields' => 'ids',
+    ]);
+
+    if (!empty($posts)) {
+        $post_id = $posts[0];
+        
+        // Зберігаємо мета-дані доставки
+        update_post_meta($post_id, 'ppo_np_settlement_ref', $settlement_ref);
+        update_post_meta($post_id, 'ppo_np_warehouse_ref', $warehouse_ref);
+        update_post_meta($post_id, 'ppo_delivery_address_full', "{$city_search}, {$warehouse_search}");
+        update_post_meta($post_id, 'ppo_recipient_name', $recipient_name);
+        update_post_meta($post_id, 'ppo_recipient_phone', $recipient_phone);
+        
+        // Оновлюємо статус/заголовок, якщо потрібно
+        wp_update_post([
+            'ID' => $post_id,
+            'post_title' => 'Замовлення #' . $order_id_code . ' - Очікує оплати',
+            'post_status' => 'pending_payment',
+        ]);
+    }
+
+    // 4. Перенаправлення на сторінку оплати
+    // Припускаємо, що сторінка оплати має URL /orderpagepayment/
+    $redirect_url = home_url('/orderpagepayment/'); 
+    wp_redirect($redirect_url);
+    exit;
 }
-add_action('ppo_render_delivery', 'ppo_render_delivery_fields');
-?>
+
+add_action('init', 'ppo_handle_delivery_form');
