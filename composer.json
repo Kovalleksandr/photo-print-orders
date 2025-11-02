@@ -1,0 +1,17 @@
+{
+    "name": "koval/photo-print-orders",
+    "autoload": {
+        "psr-4": {
+            "Koval\\PhotoPrintOrders\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "OLEKSANDR KOVAL",
+            "email": "koval.aleksandr.v@gmail.com"
+        }
+    ],
+    "require": {
+        "liqpay/liqpay": "dev-master"
+    }
+}

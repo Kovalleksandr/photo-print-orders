@@ -24,16 +24,16 @@ function ppo_handle_delivery_form_submit() {
         ppo_delivery_redirect_error('Active order not found. Please start a new order.');
     }
 
-    // 4. Збір та очищення даних
+    // 4. Збір та очищення контактних даних
     $order_id_code = $_SESSION['ppo_order_id'];
     $delivery_type = sanitize_text_field($_POST['delivery_type'] ?? '');
     
-    // Контактні дані
     $contact_name = sanitize_text_field($_POST['contact_name'] ?? '');
     $contact_phone = sanitize_text_field($_POST['contact_phone'] ?? '');
     $contact_email = sanitize_email($_POST['contact_email'] ?? '');
     
     $delivery_data = [];
+    $display_address = ''; // Змінна для збереження рядка адреси для відображення
     $is_valid = true;
     $error_message = '';
 
@@ -43,10 +43,9 @@ function ppo_handle_delivery_form_submit() {
         $is_valid = false;
     }
 
-    // 5. Обробка даних залежно від типу доставки
+    // 5. Обробка даних: Тільки Нова Пошта (Відділення/Поштомат)
     
     if ($is_valid && $delivery_type === 'novaposhta_warehouse') {
-        // Доставка Новою Поштою (відділення)
         $np_city_ref = sanitize_text_field($_POST['np_city_ref'] ?? '');
         $np_city_name = sanitize_text_field($_POST['np_city_name'] ?? '');
         $np_warehouse_ref = sanitize_text_field($_POST['np_warehouse_ref'] ?? '');
@@ -56,36 +55,43 @@ function ppo_handle_delivery_form_submit() {
             $error_message = 'Будь ласка, оберіть місто та відділення Нової Пошти.';
             $is_valid = false;
         } else {
+            // Масив для збереження в базу даних
             $delivery_data = [
-                'type' => 'Нова Пошта (Відділення)',
+                'type' => 'Нова Пошта (Відділення/Поштомат)',
                 'city_ref' => $np_city_ref,
                 'city_name' => $np_city_name,
                 'warehouse_ref' => $np_warehouse_ref,
                 'warehouse_name' => $np_warehouse_name,
             ];
+            // Рядок, який буде виведений на сторінці оплати
+            $display_address = "Нова Пошта: {$np_city_name}, {$np_warehouse_name}";
         }
-    } elseif ($is_valid && $delivery_type === 'novaposhta_address') {
-         // Доставка Новою Поштою (адресна) - Якщо ви це реалізуєте пізніше
-        $error_message = 'Адресна доставка Новою Поштою тимчасово недоступна.';
-        $is_valid = false;
-
-    } elseif ($is_valid && $delivery_type === 'self_pickup') {
-        // Самовивіз
-        $delivery_data = ['type' => 'Самовивіз'];
-
-    } elseif ($is_valid) {
-        $error_message = 'Будь ласка, оберіть коректний спосіб доставки.';
+    } else {
+        // Якщо обрано некоректний тип доставки або не обрано взагалі
+        $error_message = 'Будь ласка, оберіть коректний спосіб доставки (Нова Пошта).';
         $is_valid = false;
     }
     
     // 6. Обробка помилок
     if (!$is_valid) {
+        // Зберігаємо контактні дані назад у сесію для перенаправлення
+        $_SESSION['ppo_contact_info'] = [
+            'name' => $contact_name,
+            'phone' => $contact_phone,
+            'email' => $contact_email,
+        ];
         ppo_delivery_redirect_error($error_message);
     }
 
     // 7. Збереження даних у сесії
     $_SESSION['ppo_delivery_type'] = $delivery_type;
-    $_SESSION['ppo_delivery_address'] = $delivery_data;
+    
+    // *** ВИПРАВЛЕННЯ: Зберігаємо рядок адреси для відображення ***
+    $_SESSION['ppo_delivery_address'] = $display_address; 
+    
+    // Зберігаємо детальний масив в окремий ключ для бази даних та API
+    $_SESSION['ppo_delivery_details_array'] = $delivery_data; 
+    
     $_SESSION['ppo_contact_info'] = [
         'name' => $contact_name,
         'phone' => $contact_phone,
@@ -113,12 +119,12 @@ function ppo_handle_delivery_form_submit() {
         
         // Зберігаємо мета-дані доставки
         update_post_meta($post_id, 'ppo_delivery_type', $delivery_type);
-        update_post_meta($post_id, 'ppo_delivery_details', $delivery_data);
+        update_post_meta($post_id, 'ppo_delivery_details', $delivery_data); // Зберігаємо деталі (масив)
         update_post_meta($post_id, 'ppo_contact_info', $_SESSION['ppo_contact_info']);
     }
 
     // 9. Перенаправлення на сторінку оплати
-    $redirect_url = home_url('/orderpagepayment/'); // Замініть на ваш фактичний slug сторінки оплати
+    $redirect_url = home_url('/orderpagepayment/'); 
     wp_redirect(esc_url_raw($redirect_url));
     exit;
 }
@@ -133,3 +139,6 @@ function ppo_delivery_redirect_error($message) {
     wp_redirect(esc_url_raw($redirect_url));
     exit;
 }
+
+// Додаємо дію обробки форми
+add_action('init', 'ppo_handle_delivery_form_submit');

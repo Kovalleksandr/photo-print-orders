@@ -1,28 +1,36 @@
-/* Стилі для PPO Order Form */
-.ppo-order-form-container .ppo-button {
-    display: inline-block;
-    padding: 8px 16px;
-    margin: 5px;
-    text-decoration: none;
-    border-radius: 3px;
-    font-size: 14px;
-    visibility: visible;
+<style>
+/* --------------------------------------------------------------------------------
+ * ВИПРАВЛЕННЯ: Глобальні стилі для кнопок (для ppo-render-payment.php та інших)
+ * -------------------------------------------------------------------------------- */
+.ppo-button { 
+    display: inline-block !important; /* !important для подолання стандартних стилів WP */
+    padding: 8px 16px; 
+    margin: 5px; 
+    text-decoration: none; 
+    border-radius: 3px; 
+    font-size: 14px; 
+    visibility: visible !important; 
 }
-.ppo-order-form-container .ppo-button-primary {
-    background: #0073aa;
-    color: white;
+.ppo-button-primary { 
+    background: #0073aa; 
+    color: white; 
 }
-.ppo-order-form-container .ppo-button-primary:hover {
+.ppo-button-primary:hover {
     background: #005177;
 }
-.ppo-order-form-container .ppo-button-secondary {
-    background: #f7f7f7;
-    color: #0073aa;
-    border: 1px solid #0073aa;
+.ppo-button-secondary { 
+    background: #f7f7f7; 
+    color: #0073aa; 
+    border: 1px solid #0073aa; 
 }
-.ppo-order-form-container .ppo-button-secondary:hover {
+.ppo-button-secondary:hover {
     background: #e0e0e0;
 }
+
+
+/* --------------------------------------------------------------------------------
+ * Стилі для PPO Order Form (Загальні, Крок 1, Крок 3)
+ * -------------------------------------------------------------------------------- */
 .ppo-order-form-container .ppo-total-sum {
     font-weight: bold;
     margin: 10px 0;
@@ -61,6 +69,8 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Стилі для списку фото (Крок 1) */
 .ppo-order-form-container #photo-quantities {
     margin-top: 10px;
     border: 1px solid #ccc;
@@ -160,7 +170,7 @@
 }
 
 
-/* Візуальне розділення контейнерів */
+/* Візуальне розділення контейнерів (Крок 1) */
 .ppo-order-form-container #photo-print-order-form {
     background-color: #f0f8ff;  /* Легкий блакитний фон для форми */
     padding: 20px;
@@ -185,7 +195,7 @@
     margin-bottom: 15px;
 }
 
-/* ІНТЕГРОВАНО: Стилі для прогрес-бару */
+/* ІНТЕГРОВАНО: Стилі для прогрес-бару (Крок 1) */
 .ppo-order-form-container .ppo-progress-container { 
     width: 100%; 
     margin: 10px 0; 
@@ -211,7 +221,7 @@
     color: #0073aa; 
 }
 
-/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) */
+/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) (Крок 1) */
 .ppo-order-form-container .ppo-quantities-container.drag-over { 
     border: 2px dashed #0073aa; 
     background: #f9f9f9; 
@@ -224,7 +234,7 @@
     font-size: 16px; 
 }
 
-/* ФІКС: Анімація для "обробки" після upload */
+/* ФІКС: Анімація для "обробки" після upload (Крок 1) */
 .ppo-progress-fill.processing {
     animation: pulse 1.5s infinite;  /* Пульсація лінії */
 }
@@ -237,7 +247,7 @@
     100% { opacity: 1; }
 }
 
-/* ІНТЕГРОВАНО: Стилі для модального вікна (оновлено: плавне затухання та компактність) */
+/* ІНТЕГРОВАНО: Стилі для модального вікна */
 .ppo-modal {
     display: none;
     position: fixed;
@@ -248,30 +258,30 @@
     height: 100%;
     background-color: rgba(0,0,0,0.5);
     opacity: 0;
-    transition: opacity 0.3s ease;  /* ФІКС: Плавне затухання фону */
+    transition: opacity 0.3s ease;
 }
-.ppo-modal.show {  /* Клас для показу з fade-in */
+.ppo-modal.show {
     opacity: 1;
 }
 .ppo-modal-content {
     background-color: #fefefe;
-    margin: 5% auto 0;  /* ФІКС: Зверху (5% від top), горизонтальний центр */
+    margin: 5% auto 0;
     padding: 0;
     border: none;
     border-radius: 8px;
     width: 80%;
-    max-width: 400px;  /* ФІКС: Компактніше (було 500px) */
+    max-width: 400px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transform: translateY(-20px);  /* Початкова позиція для анімації */
-    transition: transform 0.3s ease, opacity 0.3s ease;  /* ФІКС: Плавна анімація */
+    transform: translateY(-20px);
+    transition: transform 0.3s ease, opacity 0.3s ease;
     opacity: 0;
 }
-.ppo-modal.show .ppo-modal-content {  /* Fade-in для контенту */
+.ppo-modal.show .ppo-modal-content {
     transform: translateY(0);
     opacity: 1;
 }
 .ppo-modal-header {
-    padding: 12px;  /* ФІКС: Менше відступів (було 16px) */
+    padding: 12px;
     border-bottom: 1px solid #eee;
     display: flex;
     justify-content: space-between;
@@ -280,11 +290,11 @@
 .ppo-modal-header h2 {
     margin: 0;
     color: #0073aa;
-    font-size: 18px;  /* ФІКС: Менший шрифт для компактності */
+    font-size: 18px;
 }
 .ppo-modal-close {
     color: #aaa;
-    font-size: 24px;  /* ФІКС: Трохи менше */
+    font-size: 24px;
     font-weight: bold;
     cursor: pointer;
     line-height: 1;
@@ -293,19 +303,49 @@
     color: #000;
 }
 .ppo-modal-body {
-    padding: 12px;  /* ФІКС: Менше відступів */
+    padding: 12px;
     text-align: center;
 }
 .ppo-modal-body p {
     margin: 0;
-    font-size: 14px;  /* ФІКС: Компактний шрифт */
+    font-size: 14px;
     line-height: 1.4;
 }
 .ppo-modal-footer {
-    padding: 12px;  /* ФІКС: Менше відступів */
+    padding: 12px;
     border-top: 1px solid #eee;
     text-align: center;
 }
 body.ppo-modal-open {
-    overflow: hidden;  /* Блокуємо скрол */
+    overflow: hidden;
 }
+
+/* --------------------------------------------------------------------------------
+ * Стилі для PPO Delivery Form (Крок 2)
+ * -------------------------------------------------------------------------------- */
+.ppo-form-group { margin-bottom: 15px; }
+.ppo-form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+.ppo-form-group input[type="text"], 
+.ppo-form-group input[type="tel"],
+.ppo-form-group input[type="email"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+
+.ppo-autocomplete-list { 
+    border: 1px solid #ccc; 
+    max-height: 200px; 
+    overflow-y: auto; 
+    position: absolute; 
+    width: 100%; 
+    z-index: 1000; 
+    background: white;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.ppo-autocomplete-list li { 
+    padding: 10px; 
+    cursor: pointer; 
+}
+.ppo-autocomplete-list li:hover { 
+    background-color: #f0f0f0; 
+}
+</style>

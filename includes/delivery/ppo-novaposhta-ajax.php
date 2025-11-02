@@ -21,6 +21,7 @@ function ppo_handle_np_ajax() {
 
     $response_data = [];
     $is_successful = false;
+    $api_response = []; // Ініціалізуємо змінну для зберігання відповіді API
 
     // --- 1. Пошук населених пунктів (Autocomplete для міст) ---
     if ($action_type === 'searchSettlements') { 
@@ -34,16 +35,20 @@ function ppo_handle_np_ajax() {
                 $results = [];
                 
                 // searchSettlements повертає data[0]['Addresses']
-                $addresses = $api_response['data'][0]['Addresses'] ?? [];
+                $addresses_container = $api_response['data'][0]['Addresses'] ?? [];
 
-                foreach ($addresses as $settlement) {
-                    $city_name_full = $settlement['Present'] ?? $settlement['SettlementDescription'];
+                foreach ($addresses_container as $settlement) {
+                    $city_name_full = $settlement['Present'] ?? $settlement['MainDescription']; // Наприклад, "м. Київ, Київська обл."
+                    $city_ref_value = $settlement['Ref'] ?? ''; // Реф міста (це SettlementRef)
                     
-                    $results[] = [
-                        'label' => $city_name_full, // Наприклад, "м. Київ, Київська обл."
-                        'value' => $settlement['Ref'], 
-                        'city_name' => $city_name_full, // ВИПРАВЛЕНО: Використовуємо надійне значення
-                    ];
+                    if (!empty($city_ref_value)) {
+                        $results[] = [
+                            'label' => $city_name_full, 
+                            'value' => $city_ref_value, 
+                            // Значення, яке буде вставлено у видиме поле
+                            'city_name' => $settlement['MainDescription'] ?? $settlement['Present'], 
+                        ];
+                    }
                 }
                 $response_data = $results;
             } else {
@@ -53,10 +58,11 @@ function ppo_handle_np_ajax() {
 
     // --- 2. Пошук відділень (Autocomplete для відділень) ---
     } elseif ($action_type === 'getWarehouses') {
-        $city_ref = sanitize_text_field($_POST['city_ref'] ?? '');
+        $city_ref = sanitize_text_field($_POST['city_ref'] ?? ''); // Тут приходить SettlementRef
         $term = sanitize_text_field($_POST['term'] ?? ''); 
         
         if (!empty($city_ref)) {
+            // Тепер getWarehousesByCityRef використовує SettlementRef у запиті
             $api_response = $np_api->getWarehousesByCityRef($city_ref);
 
             if (isset($api_response['success']) && $api_response['success']) {
@@ -64,17 +70,21 @@ function ppo_handle_np_ajax() {
                 $results = [];
                 
                 foreach ($api_response['data'] as $warehouse) {
-                    if (empty($term) || stripos($warehouse['DescriptionRu'] ?? $warehouse['Description'], $term) !== false || stripos($warehouse['ShortAddressRu'] ?? $warehouse['ShortAddress'], $term) !== false) {
+                    // Використовуємо регіональні поля для кращого пошуку
+                    $description = $warehouse['Description'] ?? $warehouse['DescriptionRu'];
+                    $short_address = $warehouse['ShortAddress'] ?? $warehouse['ShortAddressRu'];
+                    
+                    if (empty($term) || stripos($description, $term) !== false || stripos($short_address, $term) !== false) {
                         $results[] = [
-                            'label' => $warehouse['Description'] . ' (' . $warehouse['ShortAddress'] . ')',
-                            'value' => $warehouse['Ref'], 
-                            'address' => $warehouse['ShortAddress'],
+                            'label' => $description . ' (' . $short_address . ')',
+                            'value' => $warehouse['Ref'], // Ref відділення
+                            'address' => $short_address,
                         ];
                     }
                 }
                 $response_data = $results;
             } else {
-                $response_data = $api_response; // Зберігаємо повну відповідь, щоб log працював
+                $response_data = $api_response;
             }
         }
     }
@@ -82,12 +92,11 @@ function ppo_handle_np_ajax() {
     if ($is_successful) {
         wp_send_json($response_data);
     } else {
-        // ВИПРАВЛЕНО: Відправляємо повний об'єкт помилки Нової Пошти назад у консоль
+        // Відправляємо деталі помилки API Нової Пошти назад у консоль для діагностики
         $error_details = $api_response['errors'] ?? ['No data received or API error (details unavailable).'];
 
         wp_send_json_error([
             'message' => 'Nova Poshta API Error',
-            // ВИПРАВЛЕНО: Це поле дозволить нам побачити точну помилку API в консолі
             'details' => $error_details 
         ]);
     }

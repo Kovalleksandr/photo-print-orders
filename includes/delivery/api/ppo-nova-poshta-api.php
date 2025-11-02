@@ -41,14 +41,17 @@ class PPO_NovaPoshta_API {
         return $data;
     }
 
+    // У файлі includes/delivery/api/ppo-nova-poshta-api.php:
+
     /**
      * Шукає населені пункти (міста) за введеним рядком для Autocomplete.
-     * ВИПРАВЛЕНО: Використовуємо Address/searchSettlements.
-     * * @param string $city_name Частина назви міста для пошуку.
+     * Використовуємо Address/searchSettlements (рекомендований для онлайн-пошуку).
+     * @param string $city_name Частина назви міста для пошуку.
      * @return array
      */
     public function searchSettlements($city_name) {
         $properties = [
+            // Згідно з документацією: обов'язкові поля
             'CityName' => $city_name,
             'Limit' => 10, 
             'Page' => 1
@@ -56,6 +59,7 @@ class PPO_NovaPoshta_API {
         
         $request = [
             'apiKey'       => $this->api_key,
+            // *** ЗАЛИШАЄМО Address, оскільки це робоча модель для searchSettlements ***
             'modelName'    => 'Address', 
             'calledMethod' => 'searchSettlements',
             'methodProperties' => $properties
@@ -63,7 +67,7 @@ class PPO_NovaPoshta_API {
         
         return $this->sendRequest($request);
     }
-    
+        
     /**
      * Шукає відділення (Warehouses) за CityRef (Ref населеного пункту).
      * @param string $city_ref Ref міста.

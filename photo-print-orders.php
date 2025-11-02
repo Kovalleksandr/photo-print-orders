@@ -19,6 +19,11 @@ if (!defined('ABSPATH')) {
 define('PPO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PPO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
+// !!! АВТОЗАВАНТАЖЕННЯ COMPOSER (Встановлено на попередніх кроках) !!!
+if (file_exists(PPO_PLUGIN_DIR . 'vendor/autoload.php')) {
+    require_once PPO_PLUGIN_DIR . 'vendor/autoload.php';
+}
+
 // Завантаження конфігурації
 require_once PPO_PLUGIN_DIR . 'ppo-config.php';
 
@@ -28,9 +33,9 @@ require_once PPO_PLUGIN_DIR . 'includes/order/ppo-number-generator.php';
 require_once PPO_PLUGIN_DIR . 'includes/admin/ppo-cpt-orders.php';
 require_once PPO_PLUGIN_DIR . 'includes/cdn/ppo-ajax-cdn-handler.php';
 
-// Обробники форм (включаючи ppo-form-handler.php, який ви створювали)
-require_once PPO_PLUGIN_DIR . 'includes/form/ppo-form-handler.php';
-require_once PPO_PLUGIN_DIR . 'includes/form/ppo-delivery-form-handler.php';
+// Обробники форм 
+require_once PPO_PLUGIN_DIR . 'includes/order/ppo-form-handler.php';
+require_once PPO_PLUGIN_DIR . 'includes/delivery/ppo-delivery-form-handler.php';
 
 // Завантаження функцій рендерингу (для шорткодів)
 require_once PPO_PLUGIN_DIR . 'includes/order/ppo-render-order.php';
@@ -41,8 +46,8 @@ require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-render-payment.php';
 require_once PPO_PLUGIN_DIR . 'includes/delivery/api/ppo-nova-poshta-api.php';
 require_once PPO_PLUGIN_DIR . 'includes/delivery/ppo-novaposhta-ajax.php';
 
-// Клас LiqPay
-require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-liqpay-class.php';
+// !!! ФАЙЛ ОБРОБНИКА LIQPAY CALLBACK !!!
+require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-liqpay-callback.php';
 
 // ====================================================================
 // 2. УПРАВЛІННЯ СЕСІЯМИ ТА ОЧИЩЕННЯМ
@@ -140,14 +145,14 @@ function ppo_enqueue_scripts() {
 
     // Передача даних PHP в JavaScript (Локалізація)
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
-        'ajax_url'            => admin_url('admin-ajax.php'),
-        'nonce'               => wp_create_nonce('ppo_file_upload_nonce'),
-        'np_nonce'            => wp_create_nonce('ppo_np_nonce'), 
-        'min_sum'             => MIN_ORDER_SUM,
-        'prices'              => PHOTO_PRICES,
-        'max_files'           => MAX_FILES_PER_UPLOAD,
-        'session_formats'     => isset($_SESSION['ppo_formats']) ? array_filter($_SESSION['ppo_formats'], 'is_array') : new stdClass(),
-        'session_total'       => $_SESSION['ppo_total'] ?? 0,
+        'ajax_url'              => admin_url('admin-ajax.php'),
+        'nonce'                 => wp_create_nonce('ppo_file_upload_nonce'),
+        'np_nonce'              => wp_create_nonce('ppo_np_nonce'), 
+        'min_sum'               => MIN_ORDER_SUM,
+        'prices'                => PHOTO_PRICES,
+        'max_files'             => MAX_FILES_PER_UPLOAD,
+        'session_formats'       => isset($_SESSION['ppo_formats']) ? array_filter($_SESSION['ppo_formats'], 'is_array') : new stdClass(),
+        'session_total'         => $_SESSION['ppo_total'] ?? 0,
     ]);
 }
 add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
@@ -170,7 +175,7 @@ add_action('init', 'ppo_register_order_cpt');
 // Обробник форми після завантаження фото (визначено в ppo-form-handler.php)
 add_action('init', 'ppo_handle_forms'); 
 
-// Обробник натискання кнопки "Оформіть доставку" (яку ми щойно додали!)
+// Обробник натискання кнопки "Оформіть доставку"
 function ppo_handle_go_to_delivery_button() {
     if (!isset($_POST['ppo_go_to_delivery'])) {
         return;
@@ -217,36 +222,57 @@ add_action('wp_ajax_nopriv_ppo_np_get_divisions', 'ppo_handle_np_ajax');
 
 
 // ====================================================================
-// 7. LIQPAY CALLBACK ENDPOINT
+// 7. LIQPAY CALLBACK ENDPOINT (Оновлено для традиційного WP Endpoint)
 // ====================================================================
 
 /**
- * Реєструє REST API маршрут для прийому Callback від LiqPay.
+ * Реєструє rewrite rule для LiqPay Callback URL.
  */
-function ppo_register_liqpay_callback_route() {
-    register_rest_route('ppo/v1', '/callback/', array(
-        'methods'             => 'POST',
-        'callback'            => 'ppo_handle_liqpay_callback',
-        'permission_callback' => '__return_true', 
-    ));
+function ppo_register_liqpay_callback_url() {
+    // URL: ваш_сайт/liqpay-callback/
+    add_rewrite_rule('^liqpay-callback/?$', 'index.php?liqpay_callback=1', 'top');
 }
-add_action('rest_api_init', 'ppo_register_liqpay_callback_route');
+add_action('init', 'ppo_register_liqpay_callback_url');
 
 /**
- * Обробляє дані, надіслані LiqPay про статус платежу.
- * Примітка: Логіка обробника має бути розміщена у файлі ppo-liqpay-class.php або ppo-render-payment.php,
- * але для повноти демонстрації розміщуємо заглушку. 
- * Реальна функція ppo_handle_liqpay_callback має бути визначена.
+ * Додає query var для розпізнавання LiqPay Callback.
  */
-function ppo_handle_liqpay_callback(WP_REST_Request $request) {
-    // 1. Отримуємо дані
-    $data      = $request->get_param('data');
-    $signature = $request->get_param('signature');
-    
-    // ... Логіка перевірки підпису та оновлення статусу замовлення в БД (як обговорювалося раніше) ...
-    
-    // Якщо все добре, повертаємо 200
-    return new WP_REST_Response(['message' => 'Callback processed'], 200);
+add_filter('query_vars', 'ppo_add_liqpay_callback_query_var');
+function ppo_add_liqpay_callback_query_var($vars) {
+    $vars[] = 'liqpay_callback';
+    return $vars;
+}
+
+/**
+ * Обробляє запит, якщо це LiqPay Callback URL.
+ */
+add_action('template_redirect', 'ppo_handle_liqpay_request');
+function ppo_handle_liqpay_request() {
+    if (get_query_var('liqpay_callback')) {
+        // Забезпечуємо, що файл обробника підключено
+        // Логіка знаходиться у includes/payment/ppo-liqpay-callback.php
+        
+        // Викликаємо функцію з обробника
+        ppo_handle_liqpay_callback();
+        exit; // Важливо, щоб LiqPay отримав чистий відповідь "OK"
+    }
+}
+
+/**
+ * Оновлення rewrite rules при активації плагіна.
+ */
+register_activation_hook(__FILE__, 'ppo_activate_plugin_liqpay');
+function ppo_activate_plugin_liqpay() {
+    ppo_register_liqpay_callback_url();
+    flush_rewrite_rules();
+}
+
+/**
+ * Очищення rewrite rules при деактивації плагіна.
+ */
+register_deactivation_hook(__FILE__, 'ppo_deactivate_plugin_liqpay');
+function ppo_deactivate_plugin_liqpay() {
+    flush_rewrite_rules();
 }
 
 

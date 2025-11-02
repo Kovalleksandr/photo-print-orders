@@ -1,115 +1,120 @@
 <?php
-/**
- * Функція рендерингу шорткоду [ppo_payment_form] (Крок 3: Оплата та підтвердження).
- */
+// includes/payment/ppo-render-payment.php
 
-if (!defined('ABSPATH')) {
-    exit;
+use LiqPay\LiqPay; // Підключення класу LiqPay через namespace (завдяки Composer)
+
+/**
+ * Генерує унікальний Order ID для LiqPay.
+ * За замовчуванням, використовує ID замовлення з CPT.
+ *
+ * @param string $ppo_order_id ID замовлення з CPT.
+ * @return string Унікальний ID для LiqPay.
+ */
+function ppo_generate_liqpay_order_id(string $ppo_order_id): string {
+    // Якщо вам потрібно забезпечити унікальність при повторній оплаті (наприклад, LiqPay не дозволяє повторно використовувати order_id),
+    // можна додати суфікс:
+    // return $ppo_order_id . '-' . time();
+    
+    return $ppo_order_id;
 }
 
-function ppo_render_payment_form() {
-    // Включаємо базові стилі, якщо вони не були включені раніше
-    echo '<style>
-        .ppo-button { display: inline-block !important; padding: 8px 16px; margin: 5px; text-decoration: none; border-radius: 3px; font-size: 14px; visibility: visible !important; }
-        .ppo-button-primary { background: #0073aa; color: white; }
-        .ppo-button-secondary { background: #f7f7f7; color: #0073aa; border: 1px solid #0073aa; }
-        .ppo-total-sum { font-weight: bold; margin: 10px 0; }
-        .ppo-message { padding: 10px; margin: 10px 0; border-radius: 3px; }
-        .ppo-message-success { color: green; background: #e8f5e8; }
-        .ppo-message-error { color: red; background: #ffebee; }
-        .ppo-buttons-container { margin-top: 15px; }
-        .ppo-payment-box { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-top: 20px; background: #f9f9f9; }
-    </style>';
-    
-    if (!isset($_SESSION['ppo_order_id'])) {
-        return '<div class="ppo-message ppo-message-error"><p>Замовлення не знайдено. Будь ласка, почніть із <a href="' . esc_url(home_url('/order/')) . '">форми замовлення</a>.</p></div>';
+
+/**
+ * Функція для генерації HTML-форми LiqPay за допомогою офіційного SDK.
+ *
+ * @param float $amount Сума платежу.
+ * @param string $ppo_order_id Унікальний ID замовлення з CPT.
+ * @return string HTML-форма LiqPay або повідомлення про помилку.
+ */
+function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
+    // ВАЖЛИВО: Ці ключі потрібно буде винести в ppo-config.php або налаштування плагіна!
+    // Використовуємо тестові ключі
+    $public_key = 'sandbox_i18687908296'; 
+    $private_key = 'sandbox_lZFhaaluWK3HQAPyJqM1xcMwHXzT2yKkS3Ohbn59'; 
+
+    // Перевірка наявності класу після автозавантаження
+    if (!class_exists('LiqPay\LiqPay')) {
+         return '<p class="ppo-message ppo-message-error">Помилка: Клас LiqPay SDK не знайдено. Перевірте встановлення Composer.</p>';
     }
     
+    try {
+        $liqpay = new LiqPay($public_key, $private_key);
+        
+        $description = sprintf('Оплата замовлення фотодруку №%s', $ppo_order_id);
+        $liqpay_order_id = ppo_generate_liqpay_order_id($ppo_order_id);
+        
+        // URL-и для LiqPay
+        $payment_success_url = esc_url(home_url('/order-payment-success/')); // URL для клієнта після оплати (потрібно створити таку сторінку)
+        $server_callback_url = esc_url(home_url('/liqpay-callback/'));     // Наш Endpoint для серверних сповіщень
+
+        $params = [
+            'action'        => 'pay',
+            'amount'        => number_format($amount, 2, '.', ''),
+            'currency'      => 'UAH',
+            'description'   => $description,
+            'order_id'      => $liqpay_order_id,
+            'version'       => '3', // Використовуємо version 3 для CNB (Checkout National Bank)
+            
+            'result_url'    => $payment_success_url, 
+            'server_url'    => $server_callback_url, 
+            'language'      => 'uk',
+            'customer'      => $ppo_order_id, // Додатковий параметр для ідентифікації
+        ];
+
+        // Генеруємо форму. SDK автоматично створює 'data' та 'signature'.
+        return $liqpay->cnb_form($params);
+
+    } catch (\Exception $e) {
+        return '<p class="ppo-message ppo-message-error">Помилка ініціалізації LiqPay: ' . esc_html($e->getMessage()) . '</p>';
+    }
+}
+
+
+/**
+ * Функція для рендерингу сторінки оплати.
+ * Викликається шорткодом [ppo_payment_form].
+ */
+function ppo_render_payment_form() {
+    // 1. Перевірка сесії
+    if (empty($_SESSION['ppo_order_id']) || empty($_SESSION['ppo_total'])) {
+        return '<p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/orderpage/')) . '">Повернутися до замовлення</a>';
+    }
+
+    $ppo_order_id = sanitize_text_field($_SESSION['ppo_order_id']);
+    $total_amount = floatval($_SESSION['ppo_total']);
+    
+    // 2. Додаткова перевірка: якщо замовлення вже оплачене, показуємо повідомлення
+    // (Припускаємо, що у вас є функція для перевірки статусу замовлення)
+    /* if (ppo_is_order_paid($ppo_order_id)) {
+        return '<p class="ppo-message ppo-message-success">Ваше замовлення №' . esc_html($ppo_order_id) . ' вже успішно оплачено.</p>';
+    }
+    */
+    
     ob_start();
-    $order_id = $_SESSION['ppo_order_id'];
-    $total = $_SESSION['ppo_total'] ?? 0;
-    
-    // Фільтруємо, щоб показувати лише реальні формати
-    $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
-    
-    // --- Обробка повідомлень про успіх/помилку ---
-
-    if (isset($_GET['success']) && $_GET['success'] === 'bank_transfer_submitted'):
-        // Успішне підтвердження банківського переказу
     ?>
-        <div class="ppo-message ppo-message-success">
-            <h2>✅ Замовлення №<?php echo esc_html($order_id); ?> успішно оформлено!</h2>
-            <p>Ваше замовлення прийнято в обробку. Загальна сума: **<?php echo esc_html($total); ?> грн**.</p>
-        </div>
+    <div class="ppo-payment-container">
+        <h2>💳 Оплата замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
         
-        <div class="ppo-payment-box">
-            <h3>Оплата за реквізитами (Банківський переказ)</h3>
-            <p>Будь ласка, здійсніть переказ на суму **<?php echo esc_html($total); ?> грн** за наступними реквізитами:</p>
+        <p class="ppo-summary">Загальна сума до сплати: <strong><?php echo number_format($total_amount, 2, '.', ' '); ?> грн</strong></p>
+
+        <div class="ppo-payment-method-block">
+            <h4 class="ppo-method-title">Сплатити карткою через LiqPay</h4>
             
-            <p>
-                **Отримувач:** ФОП Приклад Прикладович<br>
-                **ІПН:** 0000000000<br>
-                **Рахунок IBAN:** UA000000000000000000000000000<br>
-                **Призначення платежу:** Оплата замовлення №<?php echo esc_html($order_id); ?>
-            </p>
-            <p>Після надходження коштів ми почнемо друк. Наші менеджери зв'яжуться з вами.</p>
+            <?php 
+            // 3. Генерація форми LiqPay
+            echo ppo_generate_liqpay_form($total_amount, $ppo_order_id);
+            ?>
+
+            <p class="ppo-note">Натискаючи кнопку "Сплатити", ви будете перенаправлені на захищену сторінку LiqPay.</p>
         </div>
         
-        <p class="ppo-buttons-container"><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary">Створити нове замовлення</a></p>
-
-    <?php elseif (isset($_GET['success']) && $_GET['success'] === 'payment_success'):
-        // Успішна оплата LiqPay (повернення з result_url)
-    ?>
-        <div class="ppo-message ppo-message-success">
-            <h2>🥳 Оплата успішна!</h2>
-            <p>Замовлення **№<?php echo esc_html($order_id); ?>** успішно сплачено на суму **<?php echo esc_html($total); ?> грн**.</p>
-            <p>Ми отримали підтвердження і розпочинаємо роботу. Очікуйте повідомлення від наших менеджерів!</p>
+        <div class="ppo-back-link">
+             <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>">
+                 &leftarrow; Повернутися до вибору доставки
+             </a>
         </div>
         
-        <p class="ppo-buttons-container"><a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-primary">Створити нове замовлення</a></p>
-
-    <?php elseif (isset($_SESSION['ppo_liqpay_form'])):
-        // Відображення форми LiqPay після вибору "карткою"
-        $liqpay_form = $_SESSION['ppo_liqpay_form'];
-        unset($_SESSION['ppo_liqpay_form']); // Видаляємо форму з сесії, щоб не відображалася знову
-
-    ?>
-        <h2>Крок 3: Оплата замовлення №<?php echo esc_html($order_id); ?></h2>
-        <p>Для завершення замовлення **№<?php echo esc_html($order_id); ?>** на суму **<?php echo esc_html($total); ?> грн** натисніть кнопку "Оплатити LiqPay". Ви будете перенаправлені на платіжну сторінку.</p>
-        
-        <div class="ppo-payment-box" style="text-align: center;">
-            <?php echo $liqpay_form; ?>
-        </div>
-        <p class="ppo-buttons-container">
-            <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">← Назад до доставки</a>
-        </p>
-        
-    <?php else: 
-        // Відображення початкової форми вибору методу оплати
-    ?>
-        <h2>Крок 3: Оплата та підтвердження</h2>
-        <p>Ваше замовлення **№<?php echo esc_html($order_id); ?>**:</p>
-        <ul>
-            <?php foreach ($session_formats as $format => $details): ?>
-                <li>**<?php echo esc_html($format); ?>**: <?php echo esc_html($details['total_copies']); ?> копій (<?php echo esc_html($details['total_price']); ?> грн)</li>
-            <?php endforeach; ?>
-        </ul>
-        <p>Адреса доставки: **<?php echo esc_html($_SESSION['ppo_delivery_address'] ?? 'Не вказано'); ?>**</p>
-        <p class="ppo-total-sum">Загальна сума до сплати: <span style="font-size: 1.2em;"><?php echo esc_html($total); ?> грн</span></p>
-
-        <p>Виберіть спосіб оплати:</p>
-        <form method="post">
-            <?php wp_nonce_field('ppo_payment_nonce', 'ppo_nonce'); ?>
-            
-            <label><input type="radio" name="payment_method" value="card" required checked> Оплата карткою (LiqPay)</label><br>
-            <label><input type="radio" name="payment_method" value="bank_transfer" required> Оплата за реквізитами (Банківський переказ)</label><br><br>
-            
-            <div class="ppo-buttons-container">
-                <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">← Назад до доставки</a>
-                <input type="submit" name="ppo_submit_payment" value="Підтвердити замовлення" class="ppo-button ppo-button-primary">
-            </div>
-        </form>
-    <?php endif;
-
+    </div>
+    <?php
     return ob_get_clean();
 }
