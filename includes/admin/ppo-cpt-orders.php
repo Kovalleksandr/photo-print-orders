@@ -12,50 +12,86 @@ if (!defined('ABSPATH')) {
  */
 function ppo_register_order_cpt() {
     $labels = [
-        'name'               => 'Замовлення Фотодруку',
-        'singular_name'      => 'Замовлення',
-        'menu_name'          => 'Замовлення Фотодруку',
-        'add_new'            => 'Створити нове',
-        'add_new_item'       => 'Створити нове замовлення',
-        'edit_item'          => 'Редагувати замовлення',
-        'new_item'           => 'Нове замовлення',
-        'view_item'          => 'Переглянути замовлення',
-        'search_items'       => 'Шукати замовлення',
-        'not_found'          => 'Замовлень не знайдено',
-        'not_found_in_trash' => 'В кошику замовлень не знайдено',
+        'name'                  => 'Замовлення Фотодруку',
+        'singular_name'         => 'Замовлення',
+        'menu_name'             => 'Замовлення Фотодруку',
+        'add_new'               => 'Створити нове',
+        'add_new_item'          => 'Створити нове замовлення',
+        'edit_item'             => 'Редагувати замовлення',
+        'new_item'              => 'Нове замовлення',
+        'view_item'             => 'Переглянути замовлення',
+        'search_items'          => 'Шукати замовлення',
+        'not_found'             => 'Замовлень не знайдено',
+        'not_found_in_trash'    => 'В кошику замовлень не знайдено',
     ];
 
     $args = [
-        'labels'              => $labels,
-        'public'              => false, // Замовлення не повинні бути публічними
-        'show_ui'             => true,
-        'show_in_menu'        => true,
-        'menu_position'       => 20,
-        'menu_icon'           => 'dashicons-camera-alt',
-        'supports'            => ['title'], // Використовуємо title лише для ID
-        'has_archive'         => false,
-        'rewrite'             => false,
-        'capabilities'        => [
-            'create_posts' => false, // Забороняємо ручне створення
+        'labels'                => $labels,
+        'public'                => false, 
+        'show_ui'               => true,
+        'show_in_menu'          => true,
+        'menu_position'         => 20,
+        'menu_icon'             => 'dashicons-camera-alt',
+        'supports'              => ['title'], 
+        'has_archive'           => false,
+        'rewrite'               => false,
+        'capabilities'          => [
+            'create_posts'      => false, // Забороняємо ручне створення
         ],
-        'map_meta_cap'        => true,
-        'exclude_from_search' => true,
+        'map_meta_cap'          => true,
+        'exclude_from_search'   => true,
+        'register_meta_box_cb'  => 'ppo_add_order_metabox', 
     ];
 
     register_post_type('ppo_order', $args);
 }
+add_action('init', 'ppo_register_order_cpt');
+
+// --------------------------------------------------------------------
+// РЕЄСТРАЦІЯ КАСТОМНИХ СТАТУСІВ
+// --------------------------------------------------------------------
+
+/**
+ * Реєстрація кастомних статусів для замовлень.
+ */
+function ppo_register_order_statuses() {
+    // 1. Статус "Оплачено"
+    register_post_status('ppo-paid', [
+        'label'                     => _x('Оплачено', 'post status', 'ppo-plugin'),
+        'public'                    => false,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop('Оплачено (%s)', 'Оплачено (%s)', 'ppo-plugin'),
+    ]);
+    
+    // 2. Статус "В роботі" 
+    register_post_status('ppo-processing', [
+        'label'                     => _x('В роботі', 'post status', 'ppo-plugin'),
+        'public'                    => false,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop('В роботі (%s)', 'В роботі (%s)', 'ppo-plugin'),
+    ]);
+}
+add_action('init', 'ppo_register_order_statuses', 9); 
+
+// --------------------------------------------------------------------
+// КОЛОНКИ СПИСКУ ЗАМОВЛЕНЬ
+// --------------------------------------------------------------------
 
 /**
  * Додавання кастомних колонок у список замовлень.
  */
 function ppo_set_custom_edit_ppo_order_columns($columns) {
-    unset($columns['date']); // Приховуємо стандартну колонку "Дата"
+    unset($columns['date']); 
     $columns['ppo_id']       = '№ Замовлення';
     $columns['ppo_total']    = 'Сума (грн)';
     $columns['ppo_status']   = 'Статус';
     $columns['ppo_delivery'] = 'Доставка';
     $columns['ppo_files']    = 'Файли';
-    $columns['date']         = 'Створено'; // Повертаємо назад в кінці
+    $columns['date']         = 'Створено'; 
 
     return $columns;
 }
@@ -66,8 +102,8 @@ add_filter('manage_ppo_order_posts_columns', 'ppo_set_custom_edit_ppo_order_colu
  */
 function ppo_custom_ppo_order_column($column, $post_id) {
     $order_meta = get_post_meta($post_id, 'ppo_order_data', true);
+    $post_status = get_post_status($post_id); 
     
-    // Перевіряємо, чи є метадані
     if (empty($order_meta) || !is_array($order_meta)) {
         echo 'N/A';
         return;
@@ -78,12 +114,10 @@ function ppo_custom_ppo_order_column($column, $post_id) {
             echo esc_html($order_meta['order_id'] ?? $post_id);
             break;
         case 'ppo_total':
-            echo '<strong>' . esc_html($order_meta['total'] ?? 0) . '</strong>';
+            echo '<strong>' . esc_html(number_format($order_meta['total'] ?? 0, 2, '.', ' ')) . '</strong>';
             break;
         case 'ppo_status':
-            // За замовчуванням "Нове", якщо не вказано
-            $status = esc_html($order_meta['status'] ?? 'new'); 
-            echo '<span style="padding: 3px 8px; border-radius: 3px; font-weight: bold; ' . ppo_get_status_style($status) . '">' . ppo_get_status_text($status) . '</span>';
+            echo '<span style="padding: 3px 8px; border-radius: 3px; font-weight: bold; ' . ppo_get_status_style($post_status) . '">' . ppo_get_status_text($post_status) . '</span>';
             break;
         case 'ppo_delivery':
             $address = esc_html($order_meta['delivery_address'] ?? 'Самовивіз/Не вказано');
@@ -108,13 +142,14 @@ add_action('manage_ppo_order_posts_custom_column', 'ppo_custom_ppo_order_column'
  */
 function ppo_get_status_style($status) {
     switch ($status) {
-        case 'completed':
+        case 'ppo-paid':
+        case 'ppo-processing':
+        case 'publish': 
             return 'background-color: #e6ffe6; color: green; border: 1px solid green;';
-        case 'processing':
-            return 'background-color: #fff3cd; color: orange; border: 1px solid orange;';
-        case 'new':
+        case 'completed':
+            return 'background-color: #d1ecf1; color: #007bff; border: 1px solid #007bff;';
         default:
-            return 'background-color: #e0f7fa; color: #0073aa; border: 1px solid #0073aa;';
+            return 'background-color: #f8d7da; color: #721c24; border: 1px solid #721c24;'; 
     }
 }
 
@@ -123,16 +158,23 @@ function ppo_get_status_style($status) {
  */
 function ppo_get_status_text($status) {
     switch ($status) {
-        case 'completed':
-            return 'Виконано';
-        case 'processing':
+        case 'ppo-paid':
+            return 'Оплачено';
+        case 'ppo-processing':
             return 'В роботі';
+        case 'publish':
         case 'new':
             return 'Нове';
+        case 'completed':
+            return 'Виконано';
         default:
-            return ucfirst($status);
+            return ucfirst(str_replace('ppo-', '', $status));
     }
 }
+
+// --------------------------------------------------------------------
+// МЕТАБОКСИ
+// --------------------------------------------------------------------
 
 /**
  * Додавання метабокса для відображення деталей замовлення.
@@ -168,19 +210,26 @@ function ppo_display_order_metabox($post) {
 
     echo '<h4>Основна інформація</h4>';
     echo '<p><strong>№ Замовлення:</strong> ' . esc_html($order_meta['order_id'] ?? 'N/A') . '</p>';
-    // ФІКС: Timestamp з post_date, якщо не в meta
-    echo '<p><strong>Дата/Час:</strong> ' . esc_html(get_the_date('d.m.Y H:i', $post) ?: ($order_meta['timestamp'] ?? 'N/A')) . '</p>';
-    // ФІКС: Статус з post_status (або meta)
+    
     $post_status = get_post_status($post->ID);
-    $status_text = ppo_get_status_text($post_status);  // Використовуємо функцію для тексту
-    echo '<p><strong>Статус:</strong> <span style="font-weight: bold; color: ' . (strpos($status_text, 'Нове') !== false ? '#0073aa' : 'green') . '">' . $status_text . '</span></p>';
-    echo '<p><strong>Загальна Сума:</strong> <strong style="font-size: 1.2em;">' . esc_html($order_meta['total'] ?? 0) . ' грн</strong></p>';
+    $status_text = ppo_get_status_text($post_status); 
+    echo '<p><strong>Статус:</strong> <strong style="color: ' . (strpos($post_status, 'paid') !== false ? 'green' : '#0073aa') . '">' . $status_text . '</strong></p>';
+    
+    echo '<p><strong>Дата/Час:</strong> ' . esc_html(get_the_date('d.m.Y H:i', $post)) . '</p>';
+    
+    $payment_status = get_post_meta($post->ID, 'ppo_payment_status', true) ?? 'N/A';
+    $total_paid = get_post_meta($post->ID, 'ppo_total_paid', true) ?? 'N/A';
+    
+    echo '<p><strong>Загальна Сума:</strong> <strong style="font-size: 1.2em;">' . esc_html(number_format($order_meta['total'] ?? 0, 2, '.', ' ')) . ' грн</strong></p>';
+    echo '<p><strong>Статус Оплати (LiqPay):</strong> ' . esc_html(ucfirst($payment_status)) . '</p>';
+    echo '<p><strong>Сплачена Сума:</strong> ' . esc_html(number_format($total_paid, 2, '.', ' ')) . ' грн</p>';
+
 
     echo '<h4>Деталі Замовлення</h4>';
     if (!empty($formats)) {
         echo '<ul>';
         foreach ($formats as $format => $details) {
-            echo '<li><strong>' . esc_html($format) . ':</strong> ' . esc_html($details['total_copies']) . ' копій, ' . esc_html($details['total_price']) . ' грн</li>';
+            echo '<li><strong>' . esc_html($format) . ':</strong> ' . esc_html($details['total_copies']) . ' копій, ' . esc_html(number_format($details['total_price'], 2, '.', '')) . ' грн</li>';
             echo '<ol style="margin-left: 20px;">';
             foreach ($details['files'] as $file) {
                  echo '<li>' . esc_html($file['name']) . ' (x' . esc_html($file['copies']) . ')</li>';
@@ -205,7 +254,6 @@ function ppo_display_order_metabox($post) {
  * Встановлення заголовка CPT як ID замовлення (для зручності).
  */
 function ppo_set_order_title($post_id) {
-    // Перевірка, що це наш CPT і що ми не перебуваємо у циклі
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return $post_id;
     if (get_post_type($post_id) !== 'ppo_order') return $post_id;
     if (wp_is_post_revision($post_id)) return $post_id;
@@ -229,8 +277,10 @@ add_action('save_post', 'ppo_set_order_title');
  */
 function ppo_show_all_order_statuses($query) {
     if (is_admin() && $query->is_main_query() && $query->get('post_type') === 'ppo_order') {
-        $query->set('post_status', 'any');  // Показуємо new, pending_payment, on-hold, completed тощо
+        $query->set('post_status', 'any'); 
     }
     return $query;
 }
 add_filter('pre_get_posts', 'ppo_show_all_order_statuses');
+
+// ... (кінець файлу)

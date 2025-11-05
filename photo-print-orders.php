@@ -15,16 +15,23 @@ if (!defined('ABSPATH')) {
 // 1. КОНФІГУРАЦІЯ ТА ВКЛЮЧЕННЯ ФАЙЛІВ
 // ====================================================================
 
-// Визначення шляху до плагіна
-define('PPO_PLUGIN_DIR', plugin_dir_path(__FILE__));
+// Визначення шляху до плагіна: Використовуємо dirname(__FILE__) для надійності
+define('PPO_PLUGIN_DIR', dirname(__FILE__) . '/');
 define('PPO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-// !!! АВТОЗАВАНТАЖЕННЯ COMPOSER (Встановлено на попередніх кроках) !!!
-if (file_exists(PPO_PLUGIN_DIR . 'vendor/autoload.php')) {
-    require_once PPO_PLUGIN_DIR . 'vendor/autoload.php';
-}
+// !!! АВТОЗАВАНТАЖЕННЯ COMPOSER (ВИПРАВЛЕНО та КОНСОЛІДОВАНО) !!!
+$composer_autoload_path = PPO_PLUGIN_DIR . 'vendor/autoload.php';
 
-// Завантаження конфігурації
+if (file_exists($composer_autoload_path)) {
+    require_once $composer_autoload_path;
+    error_log('LiqPay class exists: ' . (class_exists('LiqPay') ? 'Yes' : 'No'));
+} else {
+    error_log('*** PPO FATAL: Composer Autoload not found at: ' . $composer_autoload_path . ' ***');
+}
+// --- КІНЕЦЬ БЛОКУ COMPOSER ---
+
+
+// Завантаження конфігурації (має бути після Composer, якщо він використовує конфіги)
 require_once PPO_PLUGIN_DIR . 'ppo-config.php';
 
 // Завантаження класів та допоміжних функцій
@@ -249,10 +256,7 @@ function ppo_add_liqpay_callback_query_var($vars) {
 add_action('template_redirect', 'ppo_handle_liqpay_request');
 function ppo_handle_liqpay_request() {
     if (get_query_var('liqpay_callback')) {
-        // Забезпечуємо, що файл обробника підключено
         // Логіка знаходиться у includes/payment/ppo-liqpay-callback.php
-        
-        // Викликаємо функцію з обробника
         ppo_handle_liqpay_callback();
         exit; // Важливо, щоб LiqPay отримав чистий відповідь "OK"
     }

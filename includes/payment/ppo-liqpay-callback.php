@@ -1,8 +1,6 @@
 <?php
 // includes/payment/ppo-liqpay-callback.php
 
-use LiqPay\LiqPay;
-
 /**
  * Основна функція обробки серверного сповіщення (Callback) від LiqPay.
  * Викликається з хука template_redirect у photo-print-orders.php.
@@ -30,8 +28,8 @@ function ppo_handle_liqpay_callback() {
 
     // ВАЖЛИВО: Ці ключі повинні бути ідентичні тим, що використовуються в ppo-render-payment.php
     // У бойовому середовищі їх слід отримувати з налаштувань плагіна або ppo-config.php.
-    $public_key = 'sandbox_i18687908296'; // TEST
-    $private_key = 'sandbox_lZFhaaluWK3HQAPyJqM1xcMwHXzT2yKkS3Ohbn59'; // TEST
+    $public_key = LIQPAY_PUBLIC_KEY; 
+    $private_key = LIQPAY_PRIVATE_KEY;
 
     try {
         $data_base64 = $_POST['data'];
