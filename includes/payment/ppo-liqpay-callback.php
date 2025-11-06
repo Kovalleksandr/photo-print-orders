@@ -22,7 +22,7 @@ function ppo_handle_liqpay_callback() {
     if (empty($_POST['data']) || empty($_POST['signature'])) {
         http_response_code(400); // Помилковий запит
         // Повертаємо "OK", щоб LiqPay не повторював запит, але це краще логувати
-        // error_log('LiqPay Callback: Missing data or signature in POST.');
+        error_log('LiqPay Callback: Missing data or signature in POST.');
         die('OK'); 
     }
 
@@ -41,7 +41,7 @@ function ppo_handle_liqpay_callback() {
 
         if ($calculated_signature !== $signature_received) {
             http_response_code(403); // Доступ заборонено
-            // error_log('LiqPay Callback: Invalid signature received.');
+            error_log('LiqPay Callback: Invalid signature received.');
             die('Invalid signature'); // LiqPay буде повторювати запит, якщо не отримає "OK"
         }
 
@@ -53,14 +53,39 @@ function ppo_handle_liqpay_callback() {
         $status = sanitize_text_field($data['status'] ?? 'unknown');
         $payment_amount = floatval($data['amount'] ?? 0);
         
-        // 4. Пошук замовлення в CPT 'ppo_order' за унікальним номером
-        // Припускаємо, що CPT назва замовлення == order_id
-        $order_post = get_page_by_title($order_id, OBJECT, 'ppo_order');
-        if (!$order_post) {
-            // error_log("LiqPay Callback: Order ID {$order_id} not found.");
+        // 4. Пошук замовлення в CPT 'ppo_order' за мета-значенням 'ppo_order_id' (якщо збережено як мета)
+        $args = [
+            'post_type'      => 'ppo_order',
+            'posts_per_page' => 1,
+            'post_status'    => 'any',
+            'meta_query'     => [
+                [
+                    'key'     => 'ppo_order_id',
+                    'value'   => $order_id,
+                    'compare' => '=',
+                ],
+            ],
+        ];
+        $order_query = new WP_Query($args);
+
+        if (!$order_query->have_posts()) {
+            // Якщо не знайдено за мета, спробуємо за title як фолбек
+            $args_title = [
+                'post_type'      => 'ppo_order',
+                'post_title'     => $order_id,
+                'posts_per_page' => 1,
+                'post_status'    => 'any',
+            ];
+            $order_query = new WP_Query($args_title);
+        }
+
+        if (!$order_query->have_posts()) {
+            error_log("LiqPay Callback: Order ID {$order_id} not found.");
             http_response_code(404);
             die('Order not found');
         }
+
+        $order_post = $order_query->posts[0];
         
         // 5. Оновлення статусу замовлення 
         $current_payment_status = get_post_meta($order_post->ID, 'ppo_payment_status', true);
@@ -92,7 +117,7 @@ function ppo_handle_liqpay_callback() {
         
     } catch (\Exception $e) {
         // Логування критичної помилки обробки
-        // error_log('LiqPay Callback Fatal Error: ' . $e->getMessage());
+        error_log('LiqPay Callback Fatal Error: ' . $e->getMessage());
         http_response_code(500);
         die('OK');
     }

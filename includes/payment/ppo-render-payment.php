@@ -42,7 +42,7 @@
             $liqpay_order_id = ppo_generate_liqpay_order_id($ppo_order_id);
             
             // URL-и для LiqPay
-            $payment_success_url = esc_url(home_url('/order-payment-success/')); // URL для клієнта після оплати (потрібно створити таку сторінку)
+            $payment_success_url = esc_url(add_query_arg('order_id', $liqpay_order_id, home_url('/order-payment-success/'))); // Додаємо ?order_id=...
             $server_callback_url = esc_url(home_url('/liqpay-callback/'));     // Наш Endpoint для серверних сповіщень
 
             $params = [
@@ -114,5 +114,86 @@
             
         </div>
         <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Шорткод для відображення результату платежу: [ppo_payment_result]
+     * Показує статус оплати на основі мета-даних замовлення.
+     * Використовує сесію для отримання order_id (або можна додати GET-параметр для надійності).
+     */
+    function ppo_render_payment_result() {
+        // 1. Отримання order_id з GET (пріоритет) або сесії
+        $ppo_order_id = sanitize_text_field($_GET['order_id'] ?? ($_SESSION['ppo_order_id'] ?? ''));
+
+        if (empty($ppo_order_id)) {
+            return '<p class="ppo-message ppo-message-error">Помилка: ID замовлення не знайдено. Спробуйте повернутися до сторінки замовлення.</p>';
+        }
+
+        // 2. Пошук замовлення в CPT 'ppo_order' за мета-значенням 'ppo_order_id' (якщо збережено як мета)
+        $args = [
+            'post_type'      => 'ppo_order',
+            'posts_per_page' => 1,
+            'post_status'    => 'any',
+            'meta_query'     => [
+                [
+                    'key'     => 'ppo_order_id',
+                    'value'   => $ppo_order_id,
+                    'compare' => '=',
+                ],
+            ],
+        ];
+        $order_query = new WP_Query($args);
+
+        if (!$order_query->have_posts()) {
+            // Якщо не знайдено за мета, спробуємо за title як фолбек
+            $args_title = [
+                'post_type'      => 'ppo_order',
+                'post_title'     => $ppo_order_id,
+                'posts_per_page' => 1,
+                'post_status'    => 'any',
+            ];
+            $order_query = new WP_Query($args_title);
+        }
+
+        if (!$order_query->have_posts()) {
+            return '<p class="ppo-message ppo-message-error">Замовлення №' . esc_html($ppo_order_id) . ' не знайдено. Можливо, платіж ще оброблюється — перевірте пізніше або зверніться до підтримки.</p>';
+        }
+
+        $order_post = $order_query->posts[0];
+
+        // 3. Отримання статусу платежу з мета-даних
+        $payment_status = get_post_meta($order_post->ID, 'ppo_payment_status', true);
+        $total_paid = get_post_meta($order_post->ID, 'ppo_total_paid', true);
+        $payment_date = get_post_meta($order_post->ID, 'ppo_payment_date', true);
+        $payment_date_formatted = $payment_date ? date('d.m.Y H:i', $payment_date) : 'Н/Д';
+
+        ob_start();
+        ?>
+        <div class="ppo-payment-result-container">
+            <h2>Результат оплати замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
+            
+            <?php if ($payment_status === 'paid'): ?>
+                <p class="ppo-message ppo-message-success">Оплата успішна! Сума: <?php echo number_format(floatval($total_paid), 2, '.', ' '); ?> грн. Дата: <?php echo esc_html($payment_date_formatted); ?>.</p>
+                <p>Ваше замовлення оброблюється. Ви отримаєте підтвердження на email.</p>
+            <?php elseif ($payment_status === 'failed'): ?>
+                <p class="ppo-message ppo-message-error">Помилка оплати. Спробуйте ще раз або зверніться до підтримки.</p>
+                <a href="<?php echo esc_url(home_url('/orderpagepayment/')); ?>">Повернутися до оплати</a>
+            <?php elseif ($payment_status === 'pending'): ?>
+                <p class="ppo-message ppo-message-warning">Платіж в обробці. Будь ласка, зачекайте або перевірте пізніше.</p>
+            <?php else: ?>
+                <p class="ppo-message ppo-message-info">Статус платежу невідомий. Перевірте замовлення в особистому кабінеті.</p>
+            <?php endif; ?>
+            
+            <div class="ppo-back-link">
+                <a href="<?php echo esc_url(home_url('/orderpage/')); ?>">Повернутися до головної сторінки замовлень</a>
+            </div>
+        </div>
+        <?php
+        
+        // Опціонально: Очистити сесію після відображення (щоб уникнути повторного використання)
+        unset($_SESSION['ppo_order_id']);
+        unset($_SESSION['ppo_total']);
+
         return ob_get_clean();
     }

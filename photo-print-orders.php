@@ -24,7 +24,6 @@ $composer_autoload_path = PPO_PLUGIN_DIR . 'vendor/autoload.php';
 
 if (file_exists($composer_autoload_path)) {
     require_once $composer_autoload_path;
-    error_log('LiqPay class exists: ' . (class_exists('LiqPay') ? 'Yes' : 'No'));
 } else {
     error_log('*** PPO FATAL: Composer Autoload not found at: ' . $composer_autoload_path . ' ***');
 }
@@ -171,6 +170,7 @@ add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 add_shortcode('ppo_order_form', 'ppo_render_order_form');
 add_shortcode('ppo_delivery_form', 'ppo_render_delivery_form');
 add_shortcode('ppo_payment_form', 'ppo_render_payment_form');
+add_shortcode('ppo_payment_result', 'ppo_render_payment_result'); // Новий шорткод для результату платежу
 
 // ====================================================================
 // 5. ОБРОБНИКИ ФОРМ ТА КНОПОК
@@ -281,7 +281,7 @@ function ppo_deactivate_plugin_liqpay() {
 
 
 // ====================================================================
-// 8. АДМІН-СТОРІНКА ДЛЯ НАЛАШТУВАНЬ API НОВОЇ ПОШТИ
+// 8. АДМІН-СТОРІНКА ДЛЯ НАЛАШТУВАНЬ API НОВО Ї ПОШТИ
 // ====================================================================
 
 add_action('admin_menu', 'ppo_add_np_settings');
