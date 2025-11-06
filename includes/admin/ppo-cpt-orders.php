@@ -27,23 +27,71 @@ function ppo_register_order_cpt() {
     ];
 
     $args = [
-        'labels'             => $labels,
-        'public'             => false, // Не публічний, тільки в адмінці
-        'show_ui'            => true,  // Відображати в UI адмінки
-        'show_in_menu'       => true,  // Показувати в меню адмінки
-        'query_var'          => true,
-        'rewrite'            => ['slug' => 'ppo-order'],
-        'capability_type'    => 'post',
-        'has_archive'        => false,
-        'hierarchical'       => false,
-        'menu_position'      => null,
-        'menu_icon'          => 'dashicons-cart',
-        'supports'           => ['title', 'custom-fields'], // Підтримка заголовка та кастомних полів
+        'labels'                => $labels,
+        'public'                => false, // Не публічний, тільки в адмінці
+        'show_ui'               => true,  // Відображати в UI адмінки
+        'show_in_menu'          => true,  // Показувати в меню адмінки
+        'query_var'             => true,
+        'rewrite'               => ['slug' => 'ppo-order'],
+        'capability_type'       => 'post',
+        'has_archive'           => false,
+        'hierarchical'          => false,
+        'menu_position'         => null,
+        'menu_icon'             => 'dashicons-cart',
+        'supports'              => ['title', 'custom-fields'], // Підтримка заголовка та кастомних полів
+        // ВАЖЛИВО: Кастомні статуси будуть застосовані пізніше через filter
     ];
 
     register_post_type('ppo_order', $args);
 }
 add_action('init', 'ppo_register_order_cpt');
+
+/**
+ * Реєстрація кастомних статусів замовлення.
+ */
+function ppo_register_custom_order_statuses() {
+    // 1. Очікує оплати (використовується перед LiqPay)
+    register_post_status('pending_payment', [
+        'label'                     => _x('Очікує оплати', 'Post Status Label', 'photo-print-orders'),
+        'public'                    => true,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true, // <--- КРИТИЧНО: Показує в загальному списку
+        'show_in_admin_status_list' => true, // <--- КРИТИЧНО: Показує фільтр
+        'label_count'               => _n_noop('Очікує оплати <span class="count">(%s)</span>', 'Очікують оплати <span class="count">(%s)</span>', 'photo-print-orders'),
+    ]);
+
+    // 2. Оплачено (використовується після LiqPay callback)
+    register_post_status('ppo_paid', [
+        'label'                     => _x('Оплачено', 'Post Status Label', 'photo-print-orders'),
+        'public'                    => true,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop('Оплачено <span class="count">(%s)</span>', 'Оплачено <span class="count">(%s)</span>', 'photo-print-orders'),
+    ]);
+    
+    // 3. В обробці
+    register_post_status('ppo_processing', [
+        'label'                     => _x('В обробці', 'Post Status Label', 'photo-print-orders'),
+        'public'                    => true,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop('В обробці <span class="count">(%s)</span>', 'В обробці <span class="count">(%s)</span>', 'photo-print-orders'),
+    ]);
+    
+    // 4. Помилка оплати
+    register_post_status('ppo_failed', [
+        'label'                     => _x('Помилка оплати', 'Post Status Label', 'photo-print-orders'),
+        'public'                    => false,
+        'exclude_from_search'       => true,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop('Помилка оплати <span class="count">(%s)</span>', 'Помилки оплати <span class="count">(%s)</span>', 'photo-print-orders'),
+    ]);
+}
+add_action('init', 'ppo_register_custom_order_statuses');
+
 
 /**
  * Додавання мета-боксів для деталей замовлення в адмінці.

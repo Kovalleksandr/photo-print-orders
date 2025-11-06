@@ -1,5 +1,5 @@
 <?php
-// includes/form/ppo-delivery-form-handler.php
+// includes/delivery/ppo-delivery-form-handler.php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -85,20 +85,15 @@ function ppo_handle_delivery_form_submit() {
 
     // 7. Збереження даних у сесії
     $_SESSION['ppo_delivery_type'] = $delivery_type;
-    
-    // *** ВИПРАВЛЕННЯ: Зберігаємо рядок адреси для відображення ***
     $_SESSION['ppo_delivery_address'] = $display_address; 
-    
-    // Зберігаємо детальний масив в окремий ключ для бази даних та API
     $_SESSION['ppo_delivery_details_array'] = $delivery_data; 
-    
     $_SESSION['ppo_contact_info'] = [
         'name' => $contact_name,
         'phone' => $contact_phone,
         'email' => $contact_email,
     ];
     
-    // 8. Оновлення Custom Post Type (CPT)
+    // 8. Оновлення/Створення Custom Post Type (CPT)
     $posts = get_posts([
         'post_type'  => 'ppo_order',
         'meta_key'   => 'ppo_order_id',
@@ -107,9 +102,35 @@ function ppo_handle_delivery_form_submit() {
         'fields'     => 'ids',
     ]);
     
-    if (!empty($posts)) {
-        $post_id = $posts[0];
-        
+    $post_id = !empty($posts) ? $posts[0] : 0;
+    
+    // *** КРИТИЧНЕ ВИПРАВЛЕННЯ: Створюємо CPT, якщо його не знайдено ***
+    if (!$post_id) {
+        // Створюємо новий запис
+        $post_args = [
+            'post_title'    => 'Замовлення #' . $order_id_code . ' - Створення',
+            'post_status'   => 'draft',
+            'post_type'     => 'ppo_order',
+        ];
+        $post_id = wp_insert_post($post_args, true);
+
+        if (is_wp_error($post_id)) {
+            ppo_delivery_redirect_error('Помилка сервера: Не вдалося створити запис замовлення.');
+        }
+
+        // Обов'язково зберігаємо унікальний код замовлення
+        update_post_meta($post_id, 'ppo_order_id', $order_id_code);
+        // Зберігаємо формати та суму, які мають бути в сесії з попередніх кроків
+        if (isset($_SESSION['ppo_formats'])) {
+             update_post_meta($post_id, 'ppo_formats', $_SESSION['ppo_formats']);
+        }
+        if (isset($_SESSION['ppo_total'])) {
+             update_post_meta($post_id, 'ppo_total', floatval($_SESSION['ppo_total']));
+        }
+    }
+    
+    // Тепер оновлюємо CPT, який вже існує або щойно створений
+    if ($post_id) { 
         // Оновлення статусу та заголовка
         wp_update_post([
             'ID'          => $post_id,
@@ -119,8 +140,11 @@ function ppo_handle_delivery_form_submit() {
         
         // Зберігаємо мета-дані доставки
         update_post_meta($post_id, 'ppo_delivery_type', $delivery_type);
-        update_post_meta($post_id, 'ppo_delivery_details', $delivery_data); // Зберігаємо деталі (масив)
+        update_post_meta($post_id, 'ppo_delivery_details', $delivery_data);
         update_post_meta($post_id, 'ppo_contact_info', $_SESSION['ppo_contact_info']);
+    } else {
+        // Фолбек на випадок, якщо CPT не створився з невідомої причини
+        ppo_delivery_redirect_error('Помилка: Не вдалося ініціалізувати замовлення для оплати.');
     }
 
     // 9. Перенаправлення на сторінку оплати
