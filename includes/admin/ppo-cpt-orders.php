@@ -39,7 +39,6 @@ function ppo_register_order_cpt() {
         'menu_position'         => null,
         'menu_icon'             => 'dashicons-cart',
         'supports'              => ['title', 'custom-fields'], // Підтримка заголовка та кастомних полів
-        // ВАЖЛИВО: Кастомні статуси будуть застосовані пізніше через filter
     ];
 
     register_post_type('ppo_order', $args);
@@ -50,17 +49,15 @@ add_action('init', 'ppo_register_order_cpt');
  * Реєстрація кастомних статусів замовлення.
  */
 function ppo_register_custom_order_statuses() {
-    // 1. Очікує оплати (використовується перед LiqPay)
     register_post_status('pending_payment', [
         'label'                     => _x('Очікує оплати', 'Post Status Label', 'photo-print-orders'),
         'public'                    => true,
         'exclude_from_search'       => false,
-        'show_in_admin_all_list'    => true, // <--- КРИТИЧНО: Показує в загальному списку
-        'show_in_admin_status_list' => true, // <--- КРИТИЧНО: Показує фільтр
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
         'label_count'               => _n_noop('Очікує оплати <span class="count">(%s)</span>', 'Очікують оплати <span class="count">(%s)</span>', 'photo-print-orders'),
     ]);
 
-    // 2. Оплачено (використовується після LiqPay callback)
     register_post_status('ppo_paid', [
         'label'                     => _x('Оплачено', 'Post Status Label', 'photo-print-orders'),
         'public'                    => true,
@@ -70,7 +67,6 @@ function ppo_register_custom_order_statuses() {
         'label_count'               => _n_noop('Оплачено <span class="count">(%s)</span>', 'Оплачено <span class="count">(%s)</span>', 'photo-print-orders'),
     ]);
     
-    // 3. В обробці
     register_post_status('ppo_processing', [
         'label'                     => _x('В обробці', 'Post Status Label', 'photo-print-orders'),
         'public'                    => true,
@@ -80,7 +76,6 @@ function ppo_register_custom_order_statuses() {
         'label_count'               => _n_noop('В обробці <span class="count">(%s)</span>', 'В обробці <span class="count">(%s)</span>', 'photo-print-orders'),
     ]);
     
-    // 4. Помилка оплати
     register_post_status('ppo_failed', [
         'label'                     => _x('Помилка оплати', 'Post Status Label', 'photo-print-orders'),
         'public'                    => false,
@@ -92,6 +87,25 @@ function ppo_register_custom_order_statuses() {
 }
 add_action('init', 'ppo_register_custom_order_statuses');
 
+/**
+ * Приховування стандартних мета-боксів WordPress.
+ */
+function ppo_remove_default_meta_boxes() {
+    $cpt = 'ppo_order';
+    
+    // 1. Приховати "Произвольные поля"
+    remove_meta_box('postcustom', $cpt, 'normal'); 
+    
+    // 2. Приховати "Ярлик" (Slug)
+    remove_meta_box('slugdiv', $cpt, 'normal'); 
+    
+    // Приховати інші непотрібні поля (якщо вони були)
+    remove_meta_box('commentstatusdiv', $cpt, 'normal'); 
+    remove_meta_box('commentsdiv', $cpt, 'normal'); 
+    remove_meta_box('revisionsdiv', $cpt, 'normal'); 
+    remove_meta_box('authordiv', $cpt, 'normal'); 
+}
+add_action('admin_menu', 'ppo_remove_default_meta_boxes');
 
 /**
  * Додавання мета-боксів для деталей замовлення в адмінці.
@@ -109,30 +123,124 @@ function ppo_add_order_meta_boxes() {
 add_action('add_meta_boxes', 'ppo_add_order_meta_boxes');
 
 /**
- * Callback для мета-боксу: відображення деталей замовлення.
+ * Callback для мета-боксу: відображення деталей замовлення (ПОКРАЩЕНА ЧИТАБЕЛЬНІСТЬ).
  */
 function ppo_order_details_callback($post) {
     // Отримання мета-даних
     $ppo_order_id = get_post_meta($post->ID, 'ppo_order_id', true);
-    $ppo_formats = get_post_meta($post->ID, 'ppo_formats', true);
     $ppo_total = get_post_meta($post->ID, 'ppo_total', true);
-    $ppo_delivery_type = get_post_meta($post->ID, 'ppo_delivery_type', true);
-    $ppo_delivery_address = get_post_meta($post->ID, 'ppo_delivery_address', true);
+    
+    $ppo_contact_info = get_post_meta($post->ID, 'ppo_contact_info', true);
+    $ppo_delivery_details = get_post_meta($post->ID, 'ppo_delivery_details', true);
+    
     $ppo_payment_status = get_post_meta($post->ID, 'ppo_payment_status', true);
     $ppo_total_paid = get_post_meta($post->ID, 'ppo_total_paid', true);
     $ppo_payment_date = get_post_meta($post->ID, 'ppo_payment_date', true);
     $payment_date_formatted = $ppo_payment_date ? date('d.m.Y H:i', $ppo_payment_date) : 'Н/Д';
 
+    // Дані про формати та файли (зберігаються під ключем 'ppo_formats')
+    $ppo_formats_data = get_post_meta($post->ID, 'ppo_formats', true);
+    
+    // Форматування адреси доставки
+    $delivery_address_display = 'Н/Д';
+    if (!empty($ppo_delivery_details) && is_array($ppo_delivery_details)) {
+        if ($ppo_delivery_details['type'] === 'Нова Пошта (Відділення/Поштомат)') {
+            $delivery_address_display = sprintf(
+                'Нова Пошта: %s, %s',
+                esc_html($ppo_delivery_details['city_name'] ?? 'Місто'),
+                esc_html($ppo_delivery_details['warehouse_name'] ?? 'Відділення')
+            );
+        } else {
+             $delivery_address_display = esc_html($ppo_delivery_details['type'] ?? 'Н/Д');
+        }
+    }
+    
+    // Форматування контактів
+    $contact_name = $ppo_contact_info['name'] ?? 'Н/Д';
+    $contact_phone = $ppo_contact_info['phone'] ?? 'Н/Д';
+    $contact_email = $ppo_contact_info['email'] ?? 'Н/Д';
+    
     ?>
+    <style>
+        .ppo-meta-details p {
+            margin: 0 0 5px 0;
+            padding: 0;
+        }
+        .ppo-meta-details strong {
+            display: inline-block;
+            min-width: 120px;
+        }
+        .ppo-files-list {
+            margin-top: 5px;
+            padding: 10px;
+            border: 1px solid #eee;
+            background: #f9f9f9;
+        }
+        .ppo-files-list h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            border-bottom: 1px dashed #ddd;
+            padding-bottom: 5px;
+        }
+        .ppo-files-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .ppo-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
     <div class="ppo-meta-details">
-        <p><strong>Order ID (Meta):</strong> <?php echo esc_html($ppo_order_id); ?></p>
-        <p><strong>Formats:</strong> <?php echo esc_html(print_r($ppo_formats, true)); ?></p>
-        <p><strong>Total Amount:</strong> <?php echo esc_html($ppo_total); ?> грн</p>
-        <p><strong>Delivery Type:</strong> <?php echo esc_html($ppo_delivery_type); ?></p>
-        <p><strong>Delivery Address:</strong> <?php echo esc_html($ppo_delivery_address); ?></p>
-        <p><strong>Payment Status:</strong> <?php echo esc_html($ppo_payment_status); ?></p>
-        <p><strong>Total Paid:</strong> <?php echo esc_html($ppo_total_paid); ?> грн</p>
-        <p><strong>Payment Date:</strong> <?php echo esc_html($payment_date_formatted); ?></p>
+        <h3>Деталі Замовлення #<?php echo esc_html($ppo_order_id); ?></h3>
+        
+        <div class="ppo-section">
+            <h4>Контактна Інформація</h4>
+            <p><strong>Ім'я:</strong> <?php echo esc_html($contact_name); ?></p>
+            <p><strong>Телефон:</strong> <?php echo esc_html($contact_phone); ?></p>
+            <p><strong>Email:</strong> <?php echo esc_html($contact_email); ?></p>
+        </div>
+        
+        <div class="ppo-section">
+            <h4>Доставка</h4>
+            <p><strong>Тип Доставки:</strong> <?php echo esc_html($ppo_delivery_details['type'] ?? 'Н/Д'); ?></p>
+            <p><strong>Адреса:</strong> <?php echo $delivery_address_display; ?></p>
+        </div>
+        
+        <div class="ppo-section">
+            <h4>Оплата</h4>
+            <p><strong>Сума Замовлення:</strong> <strong><?php echo number_format(floatval($ppo_total), 2, '.', ' '); ?> грн</strong></p>
+            <p><strong>Статус Оплати:</strong> <?php echo esc_html($ppo_payment_status); ?></p>
+            <p><strong>Сплачено:</strong> <?php echo number_format(floatval($ppo_total_paid), 2, '.', ' '); ?> грн</p>
+            <p><strong>Дата Оплати:</strong> <?php echo esc_html($payment_date_formatted); ?></p>
+        </div>
+
+        <div class="ppo-section">
+            <h4>Список Файлів для Друку</h4>
+            <?php if (!empty($ppo_formats_data) && is_array($ppo_formats_data)): ?>
+                <?php unset($ppo_formats_data['order_folder_path']); // Приховуємо службовий ключ ?>
+                
+                <?php foreach ($ppo_formats_data as $format => $format_data): ?>
+                    <div class="ppo-files-list">
+                        <h4>Формат <?php echo esc_html($format); ?> (Ціна: <?php echo esc_html($format_data['price'] ?? 'Н/Д'); ?> грн/шт, Загальна ціна: <?php echo esc_html($format_data['total_price'] ?? 'Н/Д'); ?> грн)</h4>
+                        <ul>
+                            <?php 
+                            $files_array = $format_data['files'] ?? [];
+                            foreach ($files_array as $file_item): 
+                            ?>
+                                <li>
+                                    **<?php echo esc_html($file_item['name'] ?? 'Н/Д'); ?>** (Кількість: <?php echo esc_html($file_item['copies'] ?? 1); ?> шт) 
+                                    <br><small>Шлях CDN: <?php echo esc_html($file_item['cdn_path'] ?? 'Н/Д'); ?></small>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p>Дані про файли відсутні.</p>
+            <?php endif; ?>
+        </div>
     </div>
     <?php
 }
