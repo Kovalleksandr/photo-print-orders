@@ -17,6 +17,17 @@ function ppo_render_order_form() {
     $min_order_sum = MIN_ORDER_SUM;
     $photo_prices = PHOTO_PRICES;
     
+    // !!! НОВЕ: Збираємо поточні опції сесії для відображення в підсумках
+    function get_option_label($key) {
+        $map = [
+            'gloss' => 'Глянець',
+            'matte' => 'Матовий',
+            'frameoff' => 'Без рамки',
+            'frameon' => 'З рамкою',
+        ];
+        return $map[$key] ?? $key;
+    }
+    
     ?>
     <div class="ppo-order-form-container">
         <div id="ppo-alert-messages">
@@ -28,7 +39,6 @@ function ppo_render_order_form() {
             <?php endif; ?>
         </div>
 
-                <!-- ІНТЕГРОВАНО: Модальне вікно для успіху (розміщено поза контейнером для повного оверлею сторінки) -->
         <div id="ppo-success-modal" class="ppo-modal" style="display: none;">
             <div class="ppo-modal-content">
                 <div class="ppo-modal-header">
@@ -57,7 +67,25 @@ function ppo_render_order_form() {
                 accept="image/jpeg,image/png" 
                 class="ppo-hidden-file-input"
             >
-
+            
+            <div class="ppo-option-group">
+                <label>Оберіть тип паперу:</label><br>
+                <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
+                <label for="finish-gloss">Глянцевий (gloss)</label>
+                
+                <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
+                <label for="finish-matte">Матовий (matte)</label>
+            </div>
+            
+            <div class="ppo-option-group">
+                <label>Оберіть наявність рамки:</label><br>
+                <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
+                <label for="frame-off">Без рамки (frameoff)</label>
+                
+                <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
+                <label for="frame-on">З рамкою (frameon)</label>
+            </div>
+            
             <label for="format">Оберіть формат фото:</label>
             <select name="format" id="format" required class="ppo-format-select">
                 <option value="">-- виберіть --</option>
@@ -88,12 +116,10 @@ function ppo_render_order_form() {
                     Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
                 </p>
 
-                <!-- ФІКС: Кнопки всередині #photo-quantities-container (після підсумків) -->
                 <div class="ppo-buttons-in-quantities">
                     <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
                     <div id="ppo-loader" class="ppo-loader"></div>
                     
-                    <!-- ІНТЕГРОВАНО: Прогрес-бар для AJAX-завантаження (після loader) -->
                     <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
                         <div id="ppo-progress-bar" class="ppo-progress-bar">
                             <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
@@ -126,8 +152,17 @@ function ppo_render_order_form() {
                         // Відображаємо лише формати, ігноруючи технічні ключі
                         foreach ($session_formats as $key => $details): 
                             if (is_array($details)):
+                                // !!! ЗМІНА: Розбираємо ключ для коректного відображення опцій
+                                $key_parts = explode('_', $key, 3);
+                                $format_name = $key_parts[0] ?? $key;
+                                $finish_label = get_option_label($key_parts[1] ?? '');
+                                $frame_label = get_option_label($key_parts[2] ?? '');
+                                $display_key = $format_name;
+                                if ($finish_label || $frame_label) {
+                                    $display_key .= ' (' . trim("{$finish_label}, {$frame_label}", ', ') . ')';
+                                }
                         ?>
-                            <li><?php echo esc_html($key . ': ' . $details['total_copies'] . ' копій, ' . $details['total_price'] . ' грн'); ?></li>
+                            <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' копій, ' . number_format($details['total_price'], 2, '.', '') . ' грн'); ?></li>
                         <?php 
                             endif; 
                         endforeach; 
@@ -135,7 +170,7 @@ function ppo_render_order_form() {
                     <?php endif; ?>
                 </ul>
                 <p class="ppo-total-sum">
-                    Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html($session_total_display); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
+                    Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
                 </p>
                 <div class="ppo-buttons-container">
                     <form method="post" style="display: inline;">

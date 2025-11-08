@@ -1,5 +1,5 @@
 <?php
-/**
+/** includes\cdn\ppo-ajax-cdn-handler.php
  * Обробник AJAX-запитів для завантаження файлів на CDN.
  */
 
@@ -28,6 +28,11 @@ function ppo_ajax_file_upload() {
     
     // Перевірка даних форми
     $format = sanitize_text_field($_POST['format']);
+    
+    // Отримання додаткових опцій
+    $finish_option = sanitize_text_field($_POST['ppo_finish_option'] ?? 'gloss');
+    $frame_option = sanitize_text_field($_POST['ppo_frame_option'] ?? 'frameoff');
+    
     $copies_json = isset($_POST['copies']) ? stripslashes($_POST['copies']) : '[]';
     $copies_array = json_decode($copies_json, true);
     
@@ -36,6 +41,10 @@ function ppo_ajax_file_upload() {
         wp_die();
     }
 
+    // Формуємо унікальний ключ формату для сесії та CDN
+    $full_format_key = "{$format}_{$finish_option}_{$frame_option}";
+    $price_for_format = PHOTO_PRICES[$format]; 
+    
     // Ініціалізація сесії
     if (!isset($_SESSION['ppo_order_id'])) {
         $_SESSION['ppo_order_id'] = ppo_generate_order_number();
@@ -44,36 +53,40 @@ function ppo_ajax_file_upload() {
     }
     
     // Ініціалізація змінних сесії для формату, якщо не існує
-    if (!isset($_SESSION['ppo_formats'][$format])) {
-        $_SESSION['ppo_formats'][$format] = [
-            'price' => PHOTO_PRICES[$format],
+    if (!isset($_SESSION['ppo_formats'][$full_format_key])) {
+        $_SESSION['ppo_formats'][$full_format_key] = [
+            'format' => $format, 
+            'finish' => $finish_option,
+            'frame' => $frame_option,
+            'price' => $price_for_format,
             'total_copies' => 0,
             'total_price' => 0,
-            'files' => [], // Масив: ['name' => 'file.jpg', 'copies' => 1, 'cdn_path' => '...']
+            'files' => [],
         ];
     }
     
-    $current_format = &$_SESSION['ppo_formats'][$format];
+    $current_format = &$_SESSION['ppo_formats'][$full_format_key];
     $cdn_uploader = new PPO_CDN_Express_Uploader(PPO_CDN_HOST, PPO_CDN_LOGIN, PPO_CDN_PASSWORD, PPO_CDN_ROOT_PATH);
 
     $total_price_current_upload = 0;
     $total_copies_current_upload = 0;
     $files_to_add = [];
 
-    // Визначаємо шлях до папки замовлення на CDN (формат: [ORDER_ID]/[FORMAT])
+    // Визначаємо шлях до папки замовлення на CDN
     $order_folder_name = $_SESSION['ppo_order_id'];
-    $format_folder_name = sanitize_title($format); 
+    $format_folder_name = sanitize_title($full_format_key); 
     
     // ДЕБАГ: Логування базових даних
     if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("PPO AJAX Debug: Order ID = '" . $order_folder_name . "', Format = '" . $format . "', Format Folder = '" . $format_folder_name . "', Files Count = " . count($_FILES['photos']['name']));
+        error_log("PPO AJAX Debug: Order ID = '" . $order_folder_name . "', Full Format Key = '" . $full_format_key . "', Format Folder = '" . $format_folder_name . "', Files Count = " . count($_FILES['photos']['name']));
     }
     
     try {
         // 1. Створення кореневої папки замовлення (якщо не існує)
         $order_folder_path = $cdn_uploader->create_folder($order_folder_name, PPO_CDN_ROOT_PATH);
-        // Зберігаємо шлях у сесії
-        $_SESSION['ppo_formats']['order_folder_path'] = $order_folder_path; 
+        
+        // Зберігаємо шлях у окремий ключ
+        $_SESSION['ppo_order_folder_path'] = $order_folder_path; 
         
         // ДЕБАГ: Логування після створення order папки
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -88,7 +101,7 @@ function ppo_ajax_file_upload() {
             error_log("PPO AJAX Debug: Full Format Path = '" . $full_format_path . "'");
         }
 
-        // 3. Завантаження та обробка кожного файлу (ТЕПЕР ПЕР-ФАЙЛ ПАПКА ЗА КОПІЯМИ)
+        // 3. Завантаження та обробка кожного файлу
         for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
             $filename = sanitize_file_name($_FILES['photos']['name'][$i]);
             $tmp_name = $_FILES['photos']['tmp_name'][$i];
@@ -111,8 +124,8 @@ function ppo_ajax_file_upload() {
                     $filename = $path_info['filename'] . '_' . $unique_suffix . '.' . $path_info['extension'];
                 }
                 
-                // НОВЕ: Створення підпапки за кількістю копій для цього файлу (e.g., '1', '12')
-                $copies_folder_name = (string) $copies;  // "1", "12" тощо
+                // НОВЕ: Створення підпапки за кількістю копій для цього файлу
+                $copies_folder_name = (string) $copies;
                 $copies_folder_path = $cdn_uploader->create_folder($copies_folder_name, $full_format_path);
 
                 // ДЕБАГ: Логування для кожної підпапки
@@ -123,7 +136,7 @@ function ppo_ajax_file_upload() {
                 try {
                     // Завантаження файлу на CDN у copies-папку
                     $cdn_file_info = $cdn_uploader->upload_file($tmp_name, $filename, $copies_folder_path);
-                    break;  // Успішно — виходимо з циклу
+                    break;
                 } catch (\Exception $upload_error) {
                     // ФІКС: Перевіряємо, чи помилка "File exists"
                     $error_details = json_decode($upload_error->getMessage(), true) ?? [];
@@ -132,11 +145,11 @@ function ppo_ajax_file_upload() {
                         if (defined('WP_DEBUG') && WP_DEBUG) {
                             error_log("PPO AJAX Debug: File exists for '{$filename}', retrying with suffix {$unique_suffix}");
                         }
-                        if ($unique_suffix > 5) {  // Ліміт спроб (5)
+                        if ($unique_suffix > 5) {
                             throw new \Exception("Не вдалося завантажити файл '{$original_filename}': файл існує з усіма можливими суфіксами.");
                         }
                     } else {
-                        throw $upload_error;  // Інша помилка — пробиваємо
+                        throw $upload_error;
                     }
                 }
             } while ($cdn_file_info === null);
@@ -161,25 +174,37 @@ function ppo_ajax_file_upload() {
 
         // 4. Оновлення сесії
         $current_format['total_copies'] += $total_copies_current_upload;
-        $current_format['total_price'] += $total_price_current_upload;
+        
+        // Округлення суми до 2 знаків після коми для уникнення float-помилок
+        $current_format['total_price'] += round($total_price_current_upload, 2);
+        
         $current_format['files'] = array_merge($current_format['files'], $files_to_add);
         
         // Перерахунок загальної суми замовлення
         $_SESSION['ppo_total'] = 0;
-        foreach (array_filter($_SESSION['ppo_formats'] ?? [], 'is_array') as $details) {
-            $_SESSION['ppo_total'] += $details['total_price'];
+        // Перебираємо лише масив форматів
+        if (!empty($_SESSION['ppo_formats']) && is_array($_SESSION['ppo_formats'])) {
+             foreach ($_SESSION['ppo_formats'] as $details) {
+                if (isset($details['total_price'])) {
+                    $_SESSION['ppo_total'] += $details['total_price'];
+                }
+            }
         }
+        
+        // Округлення фінальної суми
+        $_SESSION['ppo_total'] = round($_SESSION['ppo_total'], 2);
         
         // Успішне завершення
         wp_send_json_success([
-            'message' => 'Успішно додано ' . count($files_to_add) . ' фото (' . $total_copies_current_upload . ' копій) до формату ' . $format . '.',
-            'formats' => array_filter($_SESSION['ppo_formats'] ?? [], 'is_array'),
+            'message' => 'Успішно додано ' . count($files_to_add) . ' фото (' . $total_copies_current_upload . ' копій) до формату ' . $full_format_key . '.',
+            'formats' => $_SESSION['ppo_formats'] ?? [],
             'total'   => $_SESSION['ppo_total'],
         ]);
 
     } catch (\Exception $e) {
-        // Логування помилки CDN
-        error_log("PPO CDN Error ({$_SESSION['ppo_order_id']}): " . $e->getMessage());
+        // Логування помилки CDN (виправлена синтаксична помилка)
+        $order_id_log = $_SESSION['ppo_order_id'] ?? 'N/A';
+        error_log("PPO CDN Error ({$order_id_log}): " . $e->getMessage());  
         
         // Повернення помилки на клієнт
         wp_send_json_error(['message' => 'Критична помилка завантаження: ' . $e->getMessage()], 500);
