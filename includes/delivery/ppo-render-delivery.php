@@ -12,7 +12,7 @@ function ppo_render_delivery_form() {
     
     // Перевірка наявності активного замовлення
     if (!isset($_SESSION['ppo_order_id'])) {
-        return '<div class="ppo-message ppo-message-error"><p>Замовлення не знайдено. Будь ласка, почніть із <a href="' . esc_url(home_url('/order/')) . '">форми замовлення</a>.</p></div>';
+        return '<div class="ppo-order-form-container"><div class="ppo-step-block ppo-message ppo-message-error"><p>Замовлення не знайдено. Будь ласка, почніть із <a href="' . esc_url(home_url('/order/')) . '">форми замовлення</a>.</p></div></div>';
     }
     
     ob_start();
@@ -24,70 +24,77 @@ function ppo_render_delivery_form() {
 
     // Отримання повідомлення про помилку з URL
     $error_message = sanitize_text_field($_GET['error'] ?? '');
-    if (!empty($error_message)) {
-        echo '<div class="ppo-message ppo-message-error" style="border-left: 5px solid red;"><p><strong>Помилка:</strong> ' . esc_html(urldecode($error_message)) . '</p></div>';
-    }
-    ?>
-
-    <h2>Крок 2: Доставка та контактні дані</h2>
     
-    <form method="post" action="">
-        <?php wp_nonce_field('ppo_delivery_action', 'ppo_delivery_nonce'); ?>
-        
-        <h3>Контактні дані отримувача</h3>
-        <div class="ppo-form-group">
-            <label for="contact_name">ПІБ (повністю)</label>
-            <input type="text" id="contact_name" name="contact_name" value="<?php echo esc_attr($contact_info['name'] ?? ''); ?>" required>
-        </div>
-        <div class="ppo-form-group">
-            <label for="contact_phone">Телефон</label>
-            <input type="tel" id="contact_phone" name="contact_phone" value="<?php echo esc_attr($contact_info['phone'] ?? ''); ?>" required>
-        </div>
-        <div class="ppo-form-group">
-            <label for="contact_email">Email</label>
-            <input type="email" id="contact_email" name="contact_email" value="<?php echo esc_attr($contact_info['email'] ?? ''); ?>" required>
-        </div>
-
-        <h3>Спосіб доставки</h3>
-        <div class="ppo-form-group">
-            <label>
-                <input type="radio" name="delivery_type" value="novaposhta_warehouse" checked required>
-                Нова Пошта (Відділення або Поштомат)
-            </label>
-        </div>
-        
-        <div id="np_delivery_fields">
-            <h3>Адреса Нової Пошти</h3>
-            
-            <div class="ppo-form-group ppo-autocomplete-container">
-                <label for="np-city-name">Місто (Населений пункт)</label>
-                <input type="text" id="np-city-name" name="np_city_name" value="<?php echo esc_attr($city_name); ?>" placeholder="Почніть вводити назву міста..." required autocomplete="off">
-                <input type="hidden" id="np-city-ref" name="np_city_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['city_ref'] ?? ''); ?>" required>
-                <ul id="np-city-list" class="ppo-autocomplete-list" style="display: none;"></ul>
-            </div>
-
-            <div class="ppo-form-group ppo-autocomplete-container">
-                <label for="np-warehouse-name">Відділення / Поштомат</label>
-                <input type="text" id="np-warehouse-name" name="np_warehouse_name" value="<?php echo esc_attr($warehouse_name); ?>" placeholder="Оберіть місто, а потім почніть вводити назву відділення..." required autocomplete="off" <?php echo empty($city_name) ? 'disabled' : ''; ?>>
-                <input type="hidden" id="np-warehouse-ref" name="np_warehouse_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['warehouse_ref'] ?? ''); ?>" required>
-                <ul id="np-warehouse-list" class="ppo-autocomplete-list" style="display: none;"></ul>
-            </div>
-        </div>
-
-        <div class="ppo-buttons-container">
-            <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">← Назад до форматів</a>
-            <input type="submit" name="ppo_delivery_submit" value="Далі: До оплати →" class="ppo-button ppo-button-primary">
-        </div>
-    </form>
-
-    <?php 
-    // Підключаємо скрипти Нової Пошти
-    if (class_exists('PPO_NovaPoshta_JS_Handler')) {
-        PPO_NovaPoshta_JS_Handler::enqueue_scripts();
-    }
     ?>
 
-    <?php
+    <div class="ppo-order-form-container ppo-delivery-page">
+    
+        <h2>Крок 2: Доставка та контактні дані</h2>
+    
+        <?php if (!empty($error_message)): ?>
+            <div class="ppo-message ppo-message-error" style="border-left: 5px solid red;"><p><strong>Помилка:</strong> <?php echo esc_html(urldecode($error_message)); ?></p></div>
+        <?php endif; ?>
+    
+        <form method="post" action="">
+            <?php wp_nonce_field('ppo_delivery_action', 'ppo_delivery_nonce'); ?>
+        
+            <div class="ppo-step-block ppo-contact-block">
+                <h3>Контактні дані отримувача</h3>
+                <div class="ppo-form-group">
+                    <label for="contact_name">ПІБ (повністю)</label>
+                    <input type="text" id="contact_name" name="contact_name" value="<?php echo esc_attr($contact_info['name'] ?? ''); ?>" required>
+                </div>
+                <div class="ppo-form-group">
+                    <label for="contact_phone">Телефон</label>
+                    <input type="tel" id="contact_phone" name="contact_phone" value="<?php echo esc_attr($contact_info['phone'] ?? ''); ?>" required>
+                </div>
+                <div class="ppo-form-group">
+                    <label for="contact_email">Email</label>
+                    <input type="email" id="contact_email" name="contact_email" value="<?php echo esc_attr($contact_info['email'] ?? ''); ?>" required>
+                </div>
+            </div>
+
+            <div class="ppo-step-block ppo-delivery-type-block">
+                <h3>Спосіб доставки</h3>
+                <div class="ppo-form-group">
+                    <label>
+                        <input type="radio" name="delivery_type" value="novaposhta_warehouse" checked required>
+                        Нова Пошта (Відділення або Поштомат)
+                    </label>
+                </div>
+        
+                <div id="np_delivery_fields">
+                    <h3>Адреса Нової Пошти</h3>
+            
+                    <div class="ppo-form-group ppo-autocomplete-container">
+                        <label for="np-city-name">Місто (Населений пункт)</label>
+                        <input type="text" id="np-city-name" name="np_city_name" value="<?php echo esc_attr($city_name); ?>" placeholder="Почніть вводити назву міста..." required autocomplete="off">
+                        <input type="hidden" id="np-city-ref" name="np_city_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['city_ref'] ?? ''); ?>" required>
+                        <ul id="np-city-list" class="ppo-autocomplete-list" style="display: none;"></ul>
+                    </div>
+
+                    <div class="ppo-form-group ppo-autocomplete-container">
+                        <label for="np-warehouse-name">Відділення / Поштомат</label>
+                        <input type="text" id="np-warehouse-name" name="np_warehouse_name" value="<?php echo esc_attr($warehouse_name); ?>" placeholder="Оберіть місто, а потім почніть вводити назву відділення..." required autocomplete="off" <?php echo empty($city_name) ? 'disabled' : ''; ?>>
+                        <input type="hidden" id="np-warehouse-ref" name="np_warehouse_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['warehouse_ref'] ?? ''); ?>" required>
+                        <ul id="np-warehouse-list" class="ppo-autocomplete-list" style="display: none;"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ppo-buttons-container">
+                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">← Назад до форматів</a>
+                <input type="submit" name="ppo_delivery_submit" value="Далі: До оплати →" class="ppo-button ppo-button-primary">
+            </div>
+        </form>
+
+        <?php 
+        // Підключаємо скрипти Нової Пошти
+        if (class_exists('PPO_NovaPoshta_JS_Handler')) {
+            PPO_NovaPoshta_JS_Handler::enqueue_scripts();
+        }
+        ?>
+    </div> <?php
     return ob_get_clean();
 }
 

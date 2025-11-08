@@ -12,12 +12,12 @@ if (!defined('ABSPATH')) {
 // ====================================================================
 function ppo_render_order_form() {
     ob_start();
-    // ОНОВЛЕННЯ 6: order_id відображаємо як placeholder, оскільки він генерується на сервері
+    // order_id відображаємо як placeholder, оскільки він генерується на сервері
     $order_id = isset($_SESSION['ppo_order_id']) ? $_SESSION['ppo_order_id'] : 'Буде згенеровано при завантаженні...';
     $min_order_sum = MIN_ORDER_SUM;
     $photo_prices = PHOTO_PRICES;
     
-    // !!! НОВЕ: Збираємо поточні опції сесії для відображення в підсумках
+    // !!! ФУНКЦІЯ: Збираємо поточні опції сесії для відображення в підсумках
     function get_option_label($key) {
         $map = [
             'gloss' => 'Глянець',
@@ -30,6 +30,7 @@ function ppo_render_order_form() {
     
     ?>
     <div class="ppo-order-form-container">
+        
         <div id="ppo-alert-messages">
             <?php if (isset($_GET['error'])): ?>
                 <div class="ppo-message ppo-message-error"><p><?php echo esc_html(urldecode($_GET['error'])); ?></p></div>
@@ -55,8 +56,8 @@ function ppo_render_order_form() {
         </div>
         
         
-        <p>мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
-        <p>завантажуйте по <?php echo MAX_FILES_PER_UPLOAD; ?> фото.</p>
+        <p>Мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
+        <p>Завантажуйте по <?php echo MAX_FILES_PER_UPLOAD; ?> фото.</p>
         
         <form id="photo-print-order-form" enctype="multipart/form-data">
             <input 
@@ -68,74 +69,86 @@ function ppo_render_order_form() {
                 class="ppo-hidden-file-input"
             >
             
-            <div id="ppo-format-options"> 
-            
-                <div class="ppo-option-group">
-                    <label>Оберіть тип паперу:</label><br>
-                    <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
-                    <label for="finish-gloss">Глянцевий (gloss)</label>
-                    
-                    <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
-                    <label for="finish-matte">Матовий (matte)</label>
-                </div>
+            <div id="ppo-step-1" class="ppo-step-block"> 
                 
-                <div class="ppo-option-group">
-                    <label>Оберіть наявність рамки:</label><br>
-                    <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
-                    <label for="frame-off">Без рамки (frameoff)</label>
-                    
-                    <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
-                    <label for="frame-on">З рамкою (frameon)</label>
-                </div>
+                <h3>1. Опції друку та формат</h3>
+
+                <div id="ppo-format-options"> 
                 
-            </div>
-            <label for="format">Оберіть формат фото:</label>
-            <select name="format" id="format" required class="ppo-format-select">
-                <option value="">-- виберіть --</option>
-                <?php foreach ($photo_prices as $format => $price): ?>
-                    <option value="<?php echo esc_attr($format); ?>" data-price="<?php echo esc_attr($price); ?>">
-                        <?php echo esc_html($format . " см — " . $price . " грн/шт"); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-
-
-            <div id="photo-quantities-container" class="ppo-quantities-container">
-                <h4>Кількість копій та видалення</h4>
-                <div id="photo-quantities" class="ppo-photo-quantities">
-                    <p id="ppo-add-photos-link" class="ppo-add-photos-link">
-                        Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
-                    </p>
-                </div>
-                
-                <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
-                    Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
-                </p>
-
-                <p class="ppo-total-sum ppo-current-upload-summary-single">
-                    Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
-                </p>
-                <p class="ppo-total-sum ppo-current-upload-summary-total">
-                    Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
-                </p>
-
-                <div class="ppo-buttons-in-quantities">
-                    <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
-                    <div id="ppo-loader" class="ppo-loader"></div>
-                    
-                    <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
-                        <div id="ppo-progress-bar" class="ppo-progress-bar">
-                            <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
-                        </div>
-                        <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
+                    <div class="ppo-option-group">
+                        <label>Оберіть тип паперу:</label><br>
+                        <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
+                        <label for="finish-gloss">Глянцевий (Gloss)</label>
+                        
+                        <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
+                        <label for="finish-matte">Матовий (Matte)</label>
                     </div>
                     
-                    <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
+                    <div class="ppo-option-group">
+                        <label>Оберіть наявність рамки:</label><br>
+                        <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
+                        <label for="frame-off">Без рамки</label>
+                        
+                        <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
+                        <label for="frame-on">З рамкою</label>
+                    </div>
+                    
+                    <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                        <label for="format">Оберіть формат фото:</label>
+                        <select name="format" id="format" required class="ppo-format-select">
+                            <option value="">-- виберіть --</option>
+                            <?php foreach ($photo_prices as $format => $price): ?>
+                                <option value="<?php echo esc_attr($format); ?>" data-price="<?php echo esc_attr($price); ?>">
+                                    <?php echo esc_html($format . " см — " . $price . " грн/шт"); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div id="ppo-step-2" class="ppo-step-block">
+                
+                <h3>2. Завантаження та копії</h3>
+
+                <div id="photo-quantities-container" class="ppo-quantities-container">
+                    <h4>Кількість копій та видалення</h4>
+                    <div id="photo-quantities" class="ppo-photo-quantities">
+                        <p id="ppo-add-photos-link" class="ppo-add-photos-link">
+                            Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
+                        </p>
+                    </div>
+                    
+                    <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
+                        Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
+                    </p>
+
+                    <p class="ppo-total-sum ppo-current-upload-summary-single">
+                        Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
+                    </p>
+                    <p class="ppo-total-sum ppo-current-upload-summary-total">
+                        Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
+                    </p>
+
+                    <div class="ppo-buttons-in-quantities">
+                        <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
+                        <div id="ppo-loader" class="ppo-loader"></div>
+                        
+                        <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
+                            <div id="ppo-progress-bar" class="ppo-progress-bar">
+                                <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
+                            </div>
+                            <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
+                        </div>
+                        
+                        <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
+                    </div>
                 </div>
             </div>
         </form>
 
-        <div id="ppo-summary" class="ppo-summary">
+        <div id="ppo-summary" class="ppo-step-block ppo-summary-block">
             <?php 
             $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
             $has_order = !empty($session_formats);
@@ -147,8 +160,9 @@ function ppo_render_order_form() {
                 $total_copies_overall = array_sum(array_column($display_formats, 'total_copies'));
             }
             ?>
+            <h3>Деталі замовлення:</h3>
+
             <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
-                <h3>Деталі замовлення:</h3>
                 <ul id="ppo-formats-list" class="ppo-formats-list">
                     <?php if ($has_order): ?>
                         <?php 

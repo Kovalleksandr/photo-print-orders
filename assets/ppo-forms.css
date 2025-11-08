@@ -1,15 +1,16 @@
-<style>
 /* --------------------------------------------------------------------------------
- * ВИПРАВЛЕННЯ: Глобальні стилі для кнопок (для ppo-render-payment.php та інших)
+ * ВИПРАВЛЕННЯ: Глобальні стилі для кнопок (Збережено ваш стиль)
  * -------------------------------------------------------------------------------- */
 .ppo-button { 
-    display: inline-block !important; /* !important для подолання стандартних стилів WP */
+    display: inline-block !important; 
     padding: 8px 16px; 
     margin: 5px; 
     text-decoration: none; 
     border-radius: 3px; 
     font-size: 14px; 
     visibility: visible !important; 
+    cursor: pointer; /* Додано для зручності */
+    transition: background 0.2s; /* Додано для плавності */
 }
 .ppo-button-primary { 
     background: #0073aa; 
@@ -27,7 +28,6 @@
     background: #e0e0e0;
 }
 
-
 /* --------------------------------------------------------------------------------
  * Стилі для PPO Order Form (Загальні, Крок 1, Крок 3)
  * -------------------------------------------------------------------------------- */
@@ -42,18 +42,22 @@
     padding: 10px;
     margin: 10px 0;
     border-radius: 3px;
+    border-left: 5px solid; /* Візуальний індикатор типу */
 }
 .ppo-order-form-container .ppo-message-success {
     color: green;
     background: #e8f5e8;
+    border-color: green;
 }
 .ppo-order-form-container .ppo-message-error {
     color: red;
     background: #ffebee;
+    border-color: red;
 }
 .ppo-order-form-container .ppo-message-warning {
     color: orange;
     background: #fff3cd;
+    border-color: orange;
 }
 .ppo-order-form-container .ppo-loader {
     display: none;
@@ -108,6 +112,8 @@
     text-align: center;
     flex-shrink: 0;
     box-sizing: border-box;
+    border-radius: 3px;
+    border: 1px solid #ccc;
 }
 .ppo-order-form-container .photo-thumbnail-container {
     width: 40px;
@@ -136,6 +142,8 @@
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
 }
 .ppo-order-form-container .ppo-add-photos-link {
     text-align: center;
@@ -170,30 +178,94 @@
 }
 
 
-/* Візуальне розділення контейнерів (Крок 1) */
-.ppo-order-form-container #photo-print-order-form {
-    background-color: #f0f8ff;  /* Легкий блакитний фон для форми */
+/* ==================================================================== */
+/* 2. НОВІ СТИЛІ ДЛЯ ВІЗУАЛЬНОГО ВІДДІЛЕННЯ БЛОКІВ */
+/* ==================================================================== */
+
+/* Стиль для кожного етапу (Крок 1, Крок 2, Підсумок) */
+.ppo-order-form-container .ppo-step-block {
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
     border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Легка тінь */
+}
+
+/* Візуальне розділення контейнерів (Тепер для ppo-step-block) */
+.ppo-order-form-container #ppo-step-1 {
+    background-color: #fcf5e6;  /* Легкий блакитний фон для Кроку 1 */
+}
+
+.ppo-order-form-container #ppo-step-2 {
+    background-color: #f0f8ff;  /* Легкий блакитний фон для Кроку 2 */
 }
 
 .ppo-order-form-container #ppo-summary {
     background-color: #f0fff0;  /* Легкий зелений фон для підсумку */
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
 }
 
-/* Додаткові стилі для кращого розділення (опціонально) */
-.ppo-order-form-container #photo-print-order-form h4,
+/* Прибираємо стилі з елементів, які тепер стилізуються через .ppo-step-block */
+.ppo-order-form-container #photo-print-order-form {
+    background-color: transparent; 
+    padding: 0;
+    border: none;
+    margin-bottom: 0;
+}
+
+
+/* Додаткові стилі для кращого розділення */
+.ppo-order-form-container h3,
 .ppo-order-form-container #ppo-summary h3 {
     color: #0073aa;
     border-bottom: 2px solid #0073aa;
     padding-bottom: 5px;
     margin-bottom: 15px;
+    margin-top: 0; /* Щоб заголовок був одразу у блоці */
 }
+
+.ppo-order-form-container #photo-print-order-form h4 {
+    /* Цей стиль залишаємо для внутрішнього заголовка Крок 2 */
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+
+/* ==================================================================== */
+/* 3. АДАПТАЦІЯ ДЛЯ БЛОКУ ОПЦІЙ (КРОК 1) */
+/* ==================================================================== */
+
+/* Забезпечуємо стилізацію для об'єднаного блоку опцій (папір, рамка, формат) */
+.ppo-order-form-container #ppo-format-options {
+    padding: 15px;
+    border: 1px dashed #0073aa; /* Чіткіше відділення опцій всередині Кроку 1 */
+    border-radius: 4px;
+    background-color: #ffffff; /* Білий фон всередині блакитного блоку */
+    margin-bottom: 15px;
+}
+
+.ppo-option-group { 
+    margin-bottom: 15px; 
+    padding-bottom: 15px; 
+    border-bottom: 1px solid #eee; /* Роздільник між опціями */
+}
+.ppo-option-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+.ppo-option-group label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+.ppo-option-group label[for] {
+    font-weight: normal;
+    display: inline-block;
+    margin-right: 15px;
+}
+
 
 /* ІНТЕГРОВАНО: Стилі для прогрес-бару (Крок 1) */
 .ppo-order-form-container .ppo-progress-container { 
@@ -236,10 +308,10 @@
 
 /* ФІКС: Анімація для "обробки" після upload (Крок 1) */
 .ppo-progress-fill.processing {
-    animation: pulse 1.5s infinite;  /* Пульсація лінії */
+    animation: pulse 1.5s infinite; 
 }
 .ppo-progress-text.processing-text {
-    animation: pulse 1.5s infinite;  /* Пульсація тексту */
+    animation: pulse 1.5s infinite; 
 }
 @keyframes pulse {
     0% { opacity: 1; }
@@ -348,4 +420,74 @@ body.ppo-modal-open {
 .ppo-autocomplete-list li:hover { 
     background-color: #f0f0f0; 
 }
-</style>
+
+
+
+/* --------------------------------------------------------------------------------
+ * Стилі для PPO Payment Form (Крок 3)
+ * -------------------------------------------------------------------------------- */
+
+/* Заголовок для методу оплати */
+.ppo-order-form-container .ppo-payment-method-block h4 {
+    color: #333;
+    font-size: 1.1em;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+/* Стиль для нотатки */
+.ppo-order-form-container .ppo-note {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #ddd;
+    text-align: center;
+}
+
+/* Стиль для LiqPay форми (щоб вона добре виглядала всередині step-block) */
+/* Це важливо, оскільки LiqPay генерує власну форму */
+.ppo-order-form-container .ppo-payment-method-block form {
+    text-align: center;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+/* Стиль для кнопки LiqPay (якщо вона не стилізується окремо) */
+/* Застосовуємо стилі ppo-button до всіх кнопок LiqPay, що можуть бути згенеровані */
+.ppo-payment-method-block form input[type="submit"] {
+    /* Наслідує ppo-button-primary стилі */
+    display: inline-block !important;
+    padding: 10px 20px !important; 
+    margin: 5px !important; 
+    text-decoration: none !important; 
+    border-radius: 4px !important; 
+    font-size: 16px !important; 
+    font-weight: bold !important;
+    cursor: pointer !important;
+    background: #0073aa !important; 
+    color: white !important; 
+    border: none !important;
+    transition: background 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.ppo-payment-method-block form input[type="submit"]:hover {
+    background: #005177 !important;
+}
+
+/* --------------------------------------------------------------------------------
+ * Стилі для PPO Payment Result (Результат оплати)
+ * -------------------------------------------------------------------------------- */
+.ppo-payment-result-container .ppo-result-block {
+    background-color: #ffffff; /* Білий фон для виділення результату */
+    border: 2px solid #0073aa; /* Чітка рамка */
+}
+
+/* Великі заголовки для результату */
+.ppo-payment-result-container h2 {
+    font-size: 1.8em;
+    color: #0073aa;
+    margin-bottom: 20px;
+}

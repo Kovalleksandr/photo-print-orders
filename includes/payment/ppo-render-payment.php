@@ -71,7 +71,7 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
 function ppo_render_payment_form() {
     // 1. Перевірка сесії
     if (empty($_SESSION['ppo_order_id']) || empty($_SESSION['ppo_total'])) {
-        return '<p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/orderpage/')) . '">Повернутися до замовлення</a>';
+        return '<div class="ppo-order-form-container"><p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/orderpage/')) . '" class="ppo-button ppo-button-secondary">Повернутися до замовлення</a></div>';
     }
 
     $ppo_order_id = sanitize_text_field($_SESSION['ppo_order_id']);
@@ -79,24 +79,28 @@ function ppo_render_payment_form() {
     
     ob_start();
     ?>
-    <div class="ppo-payment-container">
-        <h2>💳 Оплата замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
+    <div class="ppo-order-form-container ppo-payment-page">
+        <h2>💳 Крок 3: Оплата замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
         
-        <p class="ppo-summary">Загальна сума до сплати: <strong><?php echo number_format($total_amount, 2, '.', ' '); ?> грн</strong></p>
-
-        <div class="ppo-payment-method-block">
-            <h4 class="ppo-method-title">Сплатити карткою через LiqPay</h4>
+        <div class="ppo-step-block ppo-payment-info-block">
+            <h3>Деталі платежу</h3>
             
-            <?php 
-            // 3. Генерація форми LiqPay
-            echo ppo_generate_liqpay_form($total_amount, $ppo_order_id);
-            ?>
+            <p class="ppo-total-sum ppo-summary">Загальна сума до сплати: <strong><?php echo number_format($total_amount, 2, '.', ' '); ?> грн</strong></p>
 
-            <p class="ppo-note">Натискаючи кнопку "Сплатити", ви будете перенаправлені на захищену сторінку LiqPay.</p>
+            <div class="ppo-payment-method-block">
+                <h4 class="ppo-method-title">Сплатити карткою через LiqPay</h4>
+                
+                <?php 
+                // 3. Генерація форми LiqPay
+                echo ppo_generate_liqpay_form($total_amount, $ppo_order_id);
+                ?>
+
+                <p class="ppo-note">Натискаючи кнопку "Сплатити", ви будете перенаправлені на захищену сторінку LiqPay.</p>
+            </div>
         </div>
         
-        <div class="ppo-back-link">
-            <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>">
+        <div class="ppo-buttons-container ppo-back-link">
+            <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">
                 &leftarrow; Повернутися до вибору доставки
             </a>
         </div>
@@ -115,7 +119,7 @@ function ppo_render_payment_result() {
     $ppo_order_id = sanitize_text_field($_GET['order_id'] ?? ($_SESSION['ppo_order_id'] ?? ''));
 
     if (empty($ppo_order_id)) {
-        return '<p class="ppo-message ppo-message-error">Помилка: ID замовлення не знайдено. Спробуйте повернутися до сторінки замовлення.</p>';
+        return '<div class="ppo-order-form-container"><p class="ppo-message ppo-message-error">Помилка: ID замовлення не знайдено. Спробуйте повернутися до сторінки замовлення.</p></div>';
     }
 
     // 2. Пошук замовлення в CPT 'ppo_order' за мета-значенням 'ppo_order_id'
@@ -134,7 +138,7 @@ function ppo_render_payment_result() {
     $order_query = new WP_Query($args);
     
     if (!$order_query->have_posts()) {
-        return '<p class="ppo-message ppo-message-error">Замовлення №' . esc_html($ppo_order_id) . ' не знайдено. Можливо, платіж ще оброблюється — перевірте пізніше або зверніться до підтримки.</p>';
+        return '<div class="ppo-order-form-container"><p class="ppo-message ppo-message-error">Замовлення №' . esc_html($ppo_order_id) . ' не знайдено. Можливо, платіж ще оброблюється — перевірте пізніше або зверніться до підтримки.</p></div>';
     }
 
     $order_post = $order_query->posts[0];
@@ -147,23 +151,27 @@ function ppo_render_payment_result() {
 
     ob_start();
     ?>
-    <div class="ppo-payment-result-container">
-        <h2>Результат оплати замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
-        
-        <?php if ($payment_status === 'paid'): ?>
-            <p class="ppo-message ppo-message-success">✅ Оплата успішна! Сума: <?php echo number_format(floatval($total_paid), 2, '.', ' '); ?> грн. Дата: <?php echo esc_html($payment_date_formatted); ?>.</p>
-            <p>Ваше замовлення оброблюється. Ви отримаєте підтвердження на email.</p>
-        <?php elseif ($payment_status === 'failed'): ?>
-            <p class="ppo-message ppo-message-error">❌ Помилка оплати. Спробуйте ще раз або зверніться до підтримки.</p>
-            <a href="<?php echo esc_url(home_url('/orderpagepayment/')); ?>">Повернутися до оплати</a>
-        <?php elseif ($payment_status === 'pending'): ?>
-            <p class="ppo-message ppo-message-warning">⏳ Платіж в обробці. Будь ласка, зачекайте або перевірте пізніше.</p>
-        <?php else: ?>
-            <p class="ppo-message ppo-message-info">ℹ️ Статус платежу невідомий. Перевірте замовлення в особистому кабінеті.</p>
-        <?php endif; ?>
-        
-        <div class="ppo-back-link">
-            <a href="<?php echo esc_url(home_url('/orderpage/')); ?>">Повернутися до головної сторінки замовлень</a>
+    <div class="ppo-order-form-container ppo-payment-result-container">
+        <div class="ppo-step-block ppo-result-block">
+            <h2>Результат оплати замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
+            
+            <?php if ($payment_status === 'paid'): ?>
+                <p class="ppo-message ppo-message-success">✅ Оплата успішна! Сума: <?php echo number_format(floatval($total_paid), 2, '.', ' '); ?> грн. Дата: <?php echo esc_html($payment_date_formatted); ?>.</p>
+                <p>Ваше замовлення оброблюється. Ви отримаєте підтвердження на email.</p>
+            <?php elseif ($payment_status === 'failed'): ?>
+                <p class="ppo-message ppo-message-error">❌ Помилка оплати. Спробуйте ще раз або зверніться до підтримки.</p>
+                <div class="ppo-buttons-container">
+                    <a href="<?php echo esc_url(home_url('/orderpagepayment/')); ?>" class="ppo-button ppo-button-primary">Повернутися до оплати</a>
+                </div>
+            <?php elseif ($payment_status === 'pending'): ?>
+                <p class="ppo-message ppo-message-warning">⏳ Платіж в обробці. Будь ласка, зачекайте або перевірте пізніше.</p>
+            <?php else: ?>
+                <p class="ppo-message ppo-message-info">ℹ️ Статус платежу невідомий. Перевірте замовлення в особистому кабінеті.</p>
+            <?php endif; ?>
+            
+            <div class="ppo-buttons-container ppo-back-link">
+                <a href="<?php echo esc_url(home_url('/orderpage/')); ?>" class="ppo-button ppo-button-secondary">Повернутися до головної сторінки замовлень</a>
+            </div>
         </div>
     </div>
     <?php
@@ -178,4 +186,5 @@ function ppo_render_payment_result() {
 // РЕЄСТРАЦІЯ ШОРТКОДУ (додайте це до ppo-render-payment.php, якщо він ще не підключений у photo-print-orders.php)
 if (function_exists('add_shortcode')) {
     add_shortcode('ppo_payment_result', 'ppo_render_payment_result');
+    add_shortcode('ppo_payment_form', 'ppo_render_payment_form');
 }
