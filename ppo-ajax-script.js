@@ -1,5 +1,46 @@
 jQuery(document).ready(function($) {
 
+    // ====================================================================
+    // 0. КОНСТАНТИ, ХЕЛПЕРИ ТА ЗМІННІ
+    // ====================================================================
+
+    // --- Функція для контролю видимості опцій формату (ЗАЛИШАЄМО БЕЗ ЗМІН) ---
+    /**
+     * Функція для контролю видимості контейнера опцій типу паперу та рамки.
+     */
+    function toggleFormatOptionsVisibility() {
+        const quantitiesContainer = document.getElementById('photo-quantities');
+        const optionsContainer = document.getElementById('ppo-format-options');
+
+        if (!quantitiesContainer || !optionsContainer) {
+            return; 
+        }
+
+        // Перевіряємо, чи є в контейнері фото якісні елементи (завантажені фото).
+        const hasPhotos = accumulatedFiles.files.length > 0;
+
+        // Показуємо опції, лише якщо немає файлів для поточного завантаження.
+        if (hasPhotos) {
+            optionsContainer.style.display = 'none';
+        } else {
+            // Якщо фото немає, відображаємо контейнер опцій
+            optionsContainer.style.display = ''; // або 'block'
+        }
+    }
+
+    /**
+     * Функція-хелпер для отримання людської назви опції
+     */
+    function getOptionLabel(key) {
+        const map = {
+            'gloss': 'Глянець',
+            'matte': 'Матовий',
+            'frameoff': 'Без рамки',
+            'frameon': 'З рамкою',
+        };
+        return map[key] ?? '';
+    }
+
     // Отримання даних з об'єкта локалізації WP
     const ajaxUrl = ppo_ajax_object.ajax_url;
     const nonce = ppo_ajax_object.nonce;
@@ -21,7 +62,7 @@ jQuery(document).ready(function($) {
     
     // !!! НОВІ ЕЛЕМЕНТИ ДЛЯ ОПЦІЙ
     const $finishOptions = $('input[name="ppo_finish_option"]'); // Глянець/Матовий
-    const $frameOptions = $('input[name="ppo_frame_option"]');   // Рамка/Без рамки
+    const $frameOptions = $('input[name="ppo_frame_option"]');   // Рамка/Без рамки
     
     const $quantitiesContainer = $('#photo-quantities');
     const $currentUploadSum = $('#current-upload-sum');
@@ -52,18 +93,12 @@ jQuery(document).ready(function($) {
     const $modalClose = $('.ppo-modal-close');
     const $modalOk = $('#ppo-modal-ok');
 
-    // --- Допоміжні функції ---
+    // --- Допоміжні функції (Повідомлення, Модальні вікна) ---
 
-    /**
-     * Очищає контейнер повідомлень
-     */
     function clearMessages() {
         $messages.empty();
     }
 
-    /**
-     * Відображає повідомлення користувачеві (для помилок/попереджень — верх форми)
-     */
     function displayMessage(message, type) {
         clearMessages();
         const $alert = $('<div>')
@@ -72,7 +107,6 @@ jQuery(document).ready(function($) {
         $messages.append($alert);
     }
 
-    // ІНТЕГРОВАНО: Функція для показу модального вікна 
     function showModal(message) {
         $modalMessage.text(message);
         $successModal.removeClass('show').show(); 
@@ -82,22 +116,15 @@ jQuery(document).ready(function($) {
             $successModal.addClass('show');
         }, 10);
 
-        setTimeout(function() {
-            hideModal();
-        }, 2000);
-
-        $successModal.on('click', function(e) {
+        // Перевіряємо, чи вже прив'язані обробники, щоб не викликати hideModal багато разів
+        $modalOk.off('click').on('click', hideModal);
+        $modalClose.off('click').on('click', hideModal);
+        $successModal.off('click').on('click', function(e) {
             if (e.target === this) {
                 hideModal();
             }
         });
-
-        $modalOk.on('click', function() {
-            hideModal();
-        });
-
-        $modalClose.on('click', hideModal);
-        $(document).on('keydown.modal', function(e) {
+        $(document).off('keydown.modal').on('keydown.modal', function(e) {
             if (e.key === 'Escape') {
                 hideModal();
             }
@@ -109,8 +136,6 @@ jQuery(document).ready(function($) {
         setTimeout(function() { 
             $successModal.hide();
             $('body').removeClass('ppo-modal-open');
-            $successModal.off('click'); 
-            $(document).off('keydown.modal');
         }, 300); 
     }
     
@@ -122,6 +147,68 @@ jQuery(document).ready(function($) {
         const frame = $('input[name="ppo_frame_option"]:checked').val() || '';
         return `${format}_${finish}_${frame}`;
     }
+
+    // ====================================================================
+    // 3. ФУНКЦІЯ ОНОВЛЕННЯ ДЕТАЛЕЙ ЗАМОВЛЕННЯ (ВИРІШЕННЯ ПРОБЛЕМИ)
+    // ====================================================================
+    
+    /**
+     * Динамічно оновлює блок "Деталі замовлення" (список збережених форматів)
+     */
+    function updateSummaryList() {
+        const listContainer = $('#ppo-formats-list-container');
+        const formatsList = $('#ppo-formats-list');
+        const sessionTotalSpan = $('#ppo-session-total');
+        let totalCopies = 0;
+        
+        formatsList.empty(); 
+
+        if ($.isEmptyObject(sessionFormats)) {
+            listContainer.hide();
+            sessionTotalSpan.html('0.00 грн');
+            return;
+        }
+
+        // Обробляємо та відображаємо кожен формат
+        for (const key in sessionFormats) {
+            // Перевіряємо, що ключ є коректним об'єктом формату
+            if (sessionFormats.hasOwnProperty(key) && typeof sessionFormats[key] === 'object' && sessionFormats[key].format) {
+                const details = sessionFormats[key];
+                
+                // Логіка для відображення опцій (10x15 (Глянець, Без рамки))
+                const parts = key.split('_');
+                const formatName = parts[0];
+                const finishLabel = getOptionLabel(parts[1] ?? '');
+                const frameLabel = getOptionLabel(parts[2] ?? '');
+                let displayKey = formatName;
+                
+                if (finishLabel || frameLabel) {
+                     displayKey += ' (' + [finishLabel, frameLabel].filter(Boolean).join(', ') + ')';
+                }
+                
+                // Створення елементу списку
+                const listItem = $('<li>').html(`
+                    <strong>${displayKey}:</strong> 
+                    ${details.total_copies} копій, 
+                    <span class="ppo-price">${details.total_price.toFixed(2)} грн</span>
+                `);
+                formatsList.append(listItem);
+                
+                totalCopies += details.total_copies;
+            }
+        }
+        
+        // Оновлюємо загальну суму та кількість копій
+        sessionTotalSpan.html(`${sessionTotal.toFixed(2)} грн <small>(Всього копій: ${totalCopies})</small>`);
+
+        // Показуємо блок деталей замовлення
+        listContainer.show();
+    }
+    
+    // ====================================================================
+    // 4. ІНШІ ФУНКЦІЇ ДЛЯ ЛОГІКИ
+    // ====================================================================
+
 
     /**
      * Перераховує загальну суму для поточного формату та оновлює DOM
@@ -138,7 +225,6 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        // !!! ЗМІНА: Використовуємо повний ключ формату для пошуку в sessionFormats
         const fullFormatKey = getFullFormatKey(selectedFormat);
 
         const pricePerPhoto = parseFloat(prices[selectedFormat] || 0);
@@ -153,22 +239,20 @@ jQuery(document).ready(function($) {
             currentUploadTotalPrice += copies * pricePerPhoto;
         });
         
-        // !!! ЗМІНА Округлення до 0.01 грн для уникнення float-помилок
+        // Округлення до 0.01 грн для уникнення float-помилок
         const roundedCurrentUploadTotalPrice = Math.round(currentUploadTotalPrice * 100) / 100;
 
         // Загальна сума формату (поточна сесія + нове завантаження)
-        // !!! ЗМІНА: Використовуємо повний ключ для пошуку
         const sessionFormatDetails = sessionFormats[fullFormatKey] || { total_price: 0 };
         const totalSumForFormatFloat = sessionFormatDetails.total_price + roundedCurrentUploadTotalPrice;
         
-        // !!! ЗМІНА Округлення загальної суми формату до 0.01 грн
+        // Округлення загальної суми формату до 0.01 грн
         const roundedTotalSumForFormat = Math.round(totalSumForFormatFloat * 100) / 100;
         
         // Чи є вже збережені файли для цього формату?
         const hasExistingUploads = sessionFormatDetails.total_price > 0;
 
         // Оновлення відображення
-        // !!! ЗМІНА .toFixed(0) на .toFixed(2)
         $currentUploadSum.text(roundedCurrentUploadTotalPrice.toFixed(2));
         $formatTotalSum.text(roundedTotalSumForFormat.toFixed(2));
 
@@ -214,39 +298,44 @@ jQuery(document).ready(function($) {
 
         $quantitiesContainer.empty();
         const currentFiles = accumulatedFiles.files;
+        const maxFiles = maxFilesPerUpload; // для читабельності
         
         if (currentFiles.length === 0) {
             // Якщо немає файлів, повертаємо клікабельне посилання з підказкою для Drag & Drop
-            $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
-            // Повторно прив'язуємо клік до посилання, якщо воно було рендерено
-            $('#ppo-add-photos-link').on('click', function(e) {
-                e.preventDefault();
-                $hiddenFileInput.click();
-            });
+            const $link = $('<p>')
+                .attr('id', 'ppo-add-photos-link')
+                .css({
+                    'text-align': 'center', 'color': '#0073aa', 'cursor': 'pointer', 
+                    'text-decoration': 'underline', 'font-weight': 'bold', 'padding': '10px 0'
+                })
+                .text('Натисніть тут, щоб додати фото (або перетягніть файли сюди)')
+                .on('click', function(e) {
+                    e.preventDefault();
+                    $hiddenFileInput.click();
+                });
+            $quantitiesContainer.append($link);
+            
             updateCurrentUploadSummary();
+            toggleFormatOptionsVisibility(); 
             return;
         }
 
-        // ОНОВЛЕННЯ: Показуємо лічильник у посиланні (якщо < max)
-        let addLinkText = `Натисніть тут, щоб додати ще фото (додано ${currentFiles.length} з ${maxFilesPerUpload})`;
-        if (currentFiles.length >= maxFilesPerUpload) {
-            addLinkText = `Максимум файлів досягнуто (${currentFiles.length})`;
-        }
-
-        // Додаємо кнопку "Додати ще" в кінець списку (завжди видиму)
+        // ОНОВЛЕННЯ: Додаємо кнопку "Додати ще" в кінець списку 
+        let addLinkText = `Натисніть тут, щоб додати ще фото (додано ${currentFiles.length} з ${maxFiles})`;
+        
         const $addMoreLink = $('<p>')
             .attr('id', 'ppo-add-photos-link')
-            .html(addLinkText)
+            .html(currentFiles.length >= maxFiles ? `Максимум файлів досягнуто (${currentFiles.length})` : addLinkText)
             .css({
                 'text-align': 'center',
-                'color': currentFiles.length >= maxFilesPerUpload ? '#ccc' : '#0073aa',
-                'cursor': currentFiles.length >= maxFilesPerUpload ? 'default' : 'pointer',
-                'text-decoration': currentFiles.length >= maxFilesPerUpload ? 'none' : 'underline',
+                'color': currentFiles.length >= maxFiles ? '#ccc' : '#0073aa',
+                'cursor': currentFiles.length >= maxFiles ? 'default' : 'pointer',
+                'text-decoration': currentFiles.length >= maxFiles ? 'none' : 'underline',
                 'font-weight': 'bold',
                 'padding': '10px 0'
             })
             .on('click', function(e) {
-                if (currentFiles.length < maxFilesPerUpload) {
+                if (currentFiles.length < maxFiles) {
                     e.preventDefault();
                     $hiddenFileInput.click();
                 }
@@ -255,7 +344,7 @@ jQuery(document).ready(function($) {
         $.each(currentFiles, function(i, file) {
             const $item = $('<div class="photo-item">');
             
-            // Контейнер для мініатюри 
+            // ... (HTML рендеринг файлу: мініатюра, назва, input, кнопка видалення)
             const $thumbContainer = $('<div class="photo-thumbnail-container">');
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
@@ -268,12 +357,10 @@ jQuery(document).ready(function($) {
             }
             $item.append($thumbContainer);
 
-            // Назва файлу
             const $label = $('<label>')
                 .attr('for', 'copies_' + i)
                 .text(file.name);
 
-            // Поле для кількості копій
             const $input = $('<input>')
                 .attr({
                     type: 'number',
@@ -284,11 +371,9 @@ jQuery(document).ready(function($) {
                 })
                 .on('input change', updateCurrentUploadSummary);
             
-            // Кнопка видалення
             const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
                 .data('file-index', i)
                 .on('click', function() {
-                    // НОВЕ: Видаляємо з accumulatedFiles
                     removeFileFromList(i); 
                 });
             
@@ -300,6 +385,7 @@ jQuery(document).ready(function($) {
         $quantitiesContainer.append($addMoreLink);
 
         updateCurrentUploadSummary();
+        toggleFormatOptionsVisibility(); 
     }
     
     /**
@@ -320,65 +406,11 @@ jQuery(document).ready(function($) {
         renderFileQuantities();
     }
 
-    /**
-     * Оновлює підсумкову таблицю замовлення
-     */
-    function updateSummaryList() {
-        const $list = $('#ppo-formats-list');
-        $list.empty();
-        
-        let totalCopiesOverall = 0;
-        
-        // Допоміжна функція для відображення ключа
-        function getOptionLabel(key) {
-            const map = {
-                'gloss': 'Глянець',
-                'matte': 'Матовий',
-                'frameoff': 'Без рамки',
-                'frameon': 'З рамкою',
-            };
-            return map[key] || '';
-        }
-
-        // Фільтруємо системні ключі (наприклад, order_folder_path)
-        for (const fullKey in sessionFormats) {
-            if (fullKey.includes('folder_path') || !sessionFormats.hasOwnProperty(fullKey) || typeof sessionFormats[fullKey] !== 'object') continue;
-            
-            const details = sessionFormats[fullKey];
-            
-            // !!! НОВЕ: Розбір повного ключа для відображення
-            const keyParts = fullKey.split('_');
-            const formatName = keyParts[0] || fullKey;
-            const finishLabel = getOptionLabel(keyParts[1]);
-            const frameLabel = getOptionLabel(keyParts[2]);
-            
-            let displayKey = formatName;
-            const options = [finishLabel, frameLabel].filter(Boolean).join(', ');
-            if (options) {
-                displayKey += ` (${options})`;
-            }
-            
-            // !!! ЗМІНА .toFixed(0) на .toFixed(2)
-            const $listItem = $('<li>')
-                .text(`${displayKey}: ${details.total_copies} копій, ${details.total_price.toFixed(2)} грн`);
-            $list.append($listItem);
-            totalCopiesOverall += details.total_copies;
-        }
-
-        // !!! ЗМІНА .toFixed(0) на .toFixed(2)
-        $('#ppo-session-total').html(`${sessionTotal.toFixed(2)} грн <small>(Всього копій: ${totalCopiesOverall})</small>`);
-        
-        // Показуємо/ховаємо контейнер підсумків
-        if (totalCopiesOverall > 0) {
-             $('#ppo-formats-list-container').show();
-        } else {
-             $('#ppo-formats-list-container').hide();
-        }
-    }
+    // ====================================================================
+    // 5. ОБРОБНИКИ ПОДІЙ
+    // ====================================================================
     
-    // --- Обробники подій ---
-    
-    // 0. НОВИЙ ОБРОБНИК КЛІКУ ПОСИЛАННЯ
+    // 0. НОВИЙ ОБРОБНИК КЛІКУ ПОСИЛАННЯ (Потрібно, якщо початковий елемент вже існує в DOM)
     $addPhotosLink.on('click', function(e) {
         e.preventDefault();
         $hiddenFileInput.click(); 
@@ -394,17 +426,24 @@ jQuery(document).ready(function($) {
         $formatSelect.val('');
         
         // Відображаємо, що потрібно заново вибрати
-        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #cc0000; font-weight: bold; padding: 10px 0;">УВАГА! Опції змінено. Оберіть формат та додайте фото заново.</p>');
-        $('#ppo-add-photos-link').on('click', function(e) {
-             e.preventDefault();
-             $hiddenFileInput.click();
-        });
+        const $warningLink = $('<p>')
+            .attr('id', 'ppo-add-photos-link')
+            .css({'text-align': 'center', 'color': '#cc0000', 'font-weight': 'bold', 'padding': '10px 0'})
+            .text('УВАГА! Опції змінено. Оберіть формат та додайте фото заново.')
+            .on('click', function(e) {
+                e.preventDefault();
+                $hiddenFileInput.click();
+            });
+
+        $quantitiesContainer.html($warningLink);
         
         // Приховуємо контейнер, оскільки формат скинуто
         $quantitiesParent.hide();
         
         updateCurrentUploadSummary();
         displayMessage('Вибір опцій впливає на назву папки. Будь ласка, оберіть формат та додайте фото заново.', 'warning');
+        
+        toggleFormatOptionsVisibility();
     }
 
     $finishOptions.on('change', handleOptionChange);
@@ -436,7 +475,7 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        renderFileQuantities(droppedFiles);
+        renderFileQuantities(droppedFiles); 
     });
 
     // 1. При виборі формату (очищаємо поле файлів та оновлюємо підсумок)
@@ -447,13 +486,9 @@ jQuery(document).ready(function($) {
         accumulatedFiles = new DataTransfer();
         $hiddenFileInput[0].files = accumulatedFiles.files;
         
-        // !!! ОНОВЛЕНО: Початковий вміст тепер клікабельне посилання 
-        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
-        $('#ppo-add-photos-link').on('click', function(e) {
-            e.preventDefault();
-            $hiddenFileInput.click();
-        });
-        
+        // !!! ОНОВЛЕНО: Ініціалізуємо рендеринг з порожнім списком (покаже посилання "додати")
+        renderFileQuantities();
+
         if (selectedFormat) {
             $quantitiesParent.show(); 
         } 
@@ -489,7 +524,7 @@ jQuery(document).ready(function($) {
     $clearFormButton.on('click', function(e) {
         e.preventDefault();
         
-        // !!! ДОДАНО: Скидання опцій на дефолтні значення
+        // Скидання опцій на дефолтні значення
         $('#finish-gloss').prop('checked', true);
         $('#frame-off').prop('checked', true);
         
@@ -497,11 +532,8 @@ jQuery(document).ready(function($) {
         $hiddenFileInput[0].files = accumulatedFiles.files;
         $formatSelect.val(''); 
         
-        $quantitiesContainer.html('<p id="ppo-add-photos-link" style="text-align: center; color: #0073aa; cursor: pointer; text-decoration: underline; font-weight: bold; padding: 10px 0;">Натисніть тут, щоб додати фото (або перетягніть файли сюди)</p>');
-        $('#ppo-add-photos-link').on('click', function(e) {
-            e.preventDefault();
-            $hiddenFileInput.click();
-        });
+        // Перерендеринг порожнього списку
+        renderFileQuantities();
 
         $sumWarning.hide();
         $submitButton.prop('disabled', true);
@@ -511,9 +543,12 @@ jQuery(document).ready(function($) {
         $currentUploadSummarySingle.hide();
         $currentUploadSummaryTotal.hide();
         
-        $currentUploadSum.text('0.00'); // !!! ЗМІНА: 0.00
-        $formatTotalSum.text('0.00'); // !!! ЗМІНА: 0.00
+        $currentUploadSum.text('0.00'); 
+        $formatTotalSum.text('0.00'); 
         clearMessages();
+        
+        updateCurrentUploadSummary();
+        toggleFormatOptionsVisibility();
     });
 
 
@@ -521,12 +556,12 @@ jQuery(document).ready(function($) {
     $form.on('submit', function(e) {
         e.preventDefault();
 
-        const selectedFormat = $formatSelect.val();
         if (accumulatedFiles.files.length === 0) { 
             displayMessage('Будь ласка, додайте фото для завантаження.', 'error');
             return;
         }
 
+        // ... (Код підготовки та відправки AJAX-запиту)
         $loader.hide();
         $submitButton.prop('disabled', true);
         clearMessages();
@@ -535,22 +570,20 @@ jQuery(document).ready(function($) {
         $progressFill.width('0%').removeClass('processing'); 
         $progressText.text('0%').removeClass('processing-text');
 
-        // Збираємо дані форми
+        // Збір даних форми
         const formData = new FormData();
         formData.append('action', 'ppo_file_upload');
         formData.append('ppo_ajax_nonce', nonce);
-        formData.append('format', selectedFormat);
+        formData.append('format', $formatSelect.val());
         
-        // !!! НОВЕ: ДОДАЄМО ВИБРАНІ ОПЦІЇ
         formData.append('ppo_finish_option', $('input[name="ppo_finish_option"]:checked').val());
         formData.append('ppo_frame_option', $('input[name="ppo_frame_option"]:checked').val());
         
-        // Додаємо файли з accumulated 
         for (let i = 0; i < accumulatedFiles.files.length; i++) { 
             formData.append('photos[]', accumulatedFiles.files[i]);
         }
         
-        // Збираємо копії окремим масивом
+        // Збір копій
         const copiesArray = [];
         $quantitiesContainer.find('input[type="number"]').each(function() {
             copiesArray.push($(this).val());
@@ -566,6 +599,7 @@ jQuery(document).ready(function($) {
             contentType: false,
             dataType: 'json',
             xhr: function() { 
+                // ... (Код обробки прогресу: xhr.upload.addEventListener)
                 const xhr = new window.XMLHttpRequest();
                 let uploadComplete = false; 
                 
@@ -583,50 +617,43 @@ jQuery(document).ready(function($) {
                     }
                 }, false);
                 
-                xhr.addEventListener('progress', function(evt) {
-                    if (evt.lengthComputable && uploadComplete) {
-                        const percent = 100 + Math.round((evt.loaded / evt.total) * 10); 
-                        if (percent > 100) $progressFill.width('100%');
-                    }
-                }, false);
-                
                 return xhr;
             },
             success: function(response) {
                 
                 $progressContainer.hide();
                 
-                // НОВЕ: Очищуємо accumulated після успіху 
+                // Очищення форми
                 accumulatedFiles = new DataTransfer();
                 $hiddenFileInput[0].files = accumulatedFiles.files;
                 $quantitiesContainer.empty();
                 $formatSelect.val(''); 
                 
-                // !!! ДОДАНО: Скидання опцій на дефолтні значення
                 $('#finish-gloss').prop('checked', true);
                 $('#frame-off').prop('checked', true);
                 
                 if (response.success) {
                     showModal(response.data.message);
                     
-                    // Оновлення глобальної сесії JS
+                    // !!! ВИРІШЕННЯ ПРОБЛЕМИ "ПРОПАЖІ": Оновлення глобальної сесії JS та списку
                     sessionFormats = response.data.formats;
                     sessionTotal = parseFloat(response.data.total) || 0; 
                     
-                    updateSummaryList(); 
+                    updateSummaryList(); // ОНОВЛЮЄ БЛОК ЗБЕРЕЖЕНИХ ДЕТАЛЕЙ ЗАМОВЛЕННЯ
                 } else {
                     displayMessage(response.data.message, 'error');
                     $submitButton.prop('disabled', false); 
                 }
                 
-                // Очищаємо підсумок поточного завантаження після успіху/помилки
-                $currentUploadSum.text('0.00'); // !!! ЗМІНА: 0.00
-                $formatTotalSum.text('0.00'); // !!! ЗМІНА: 0.00
+                // Очищаємо підсумок поточного завантаження та приховуємо контейнери
+                $currentUploadSum.text('0.00'); 
+                $formatTotalSum.text('0.00'); 
                 $currentUploadSummarySingle.hide();
                 $currentUploadSummaryTotal.hide();
                 
-                // Після успішного завантаження приховуємо контейнер
                 $quantitiesParent.hide(); 
+
+                toggleFormatOptionsVisibility();
             },
             error: function(xhr, status, error) {
                 
@@ -636,15 +663,20 @@ jQuery(document).ready(function($) {
                                                          : 'Помилка завантаження. Перевірте консоль.';
                 displayMessage(errorMessage, 'error');
                 $submitButton.prop('disabled', false);
+
+                toggleFormatOptionsVisibility();
             }
         });
     });
 
-    // 5. Ініціалізація: оновлення підсумкової суми при завантаженні сторінки
+    // ====================================================================
+    // 6. ІНІЦІАЛІЗАЦІЯ
+    // ====================================================================
+    
     if (!$formatSelect.val()) {
         $quantitiesParent.hide(); 
     }
     updateCurrentUploadSummary(); 
-    
-    updateSummaryList(); 
+    updateSummaryList(); // Ініціалізуємо відображення деталей сесії
+    toggleFormatOptionsVisibility();
 });

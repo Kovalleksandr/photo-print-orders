@@ -36,6 +36,11 @@ function ppo_ajax_file_upload() {
     $copies_json = isset($_POST['copies']) ? stripslashes($_POST['copies']) : '[]';
     $copies_array = json_decode($copies_json, true);
     
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($copies_array)) {
+        wp_send_json_error(['message' => 'Недійсні дані кількості копій.'], 400);
+        wp_die();
+    }
+
     if (empty($format) || !isset(PHOTO_PRICES[$format])) {
         wp_send_json_error(['message' => 'Недійсний формат фотографій.'], 400);
         wp_die();
@@ -185,26 +190,27 @@ function ppo_ajax_file_upload() {
         // Перебираємо лише масив форматів
         if (!empty($_SESSION['ppo_formats']) && is_array($_SESSION['ppo_formats'])) {
              foreach ($_SESSION['ppo_formats'] as $details) {
-                if (isset($details['total_price'])) {
-                    $_SESSION['ppo_total'] += $details['total_price'];
-                }
+                 // Важливо: перевіряємо, що це не технічний ключ (наприклад, order_folder_path)
+                 if (is_array($details) && isset($details['total_price'])) {
+                     $_SESSION['ppo_total'] += $details['total_price'];
+                 }
             }
         }
         
         // Округлення фінальної суми
         $_SESSION['ppo_total'] = round($_SESSION['ppo_total'], 2);
         
-        // Успішне завершення
+        // Успішне завершення. Важливо: повертаємо оновлену сесію
         wp_send_json_success([
             'message' => 'Успішно додано ' . count($files_to_add) . ' фото (' . $total_copies_current_upload . ' копій) до формату ' . $full_format_key . '.',
             'formats' => $_SESSION['ppo_formats'] ?? [],
-            'total'   => $_SESSION['ppo_total'],
+            'total' => $_SESSION['ppo_total'], // Рядок 174 виправлено
         ]);
 
     } catch (\Exception $e) {
-        // Логування помилки CDN (виправлена синтаксична помилка)
+        // Логування помилки CDN 
         $order_id_log = $_SESSION['ppo_order_id'] ?? 'N/A';
-        error_log("PPO CDN Error ({$order_id_log}): " . $e->getMessage());  
+        error_log("PPO CDN Error ({$order_id_log}): " . $e->getMessage()); 
         
         // Повернення помилки на клієнт
         wp_send_json_error(['message' => 'Критична помилка завантаження: ' . $e->getMessage()], 500);

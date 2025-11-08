@@ -1,5 +1,5 @@
 <?php
-/**
+/** includes\order\ppo-render-order.php
  * Функція рендерингу шорткоду [ppo_order_form] (Крок 1: Замовлення та завантаження).
  */
 
@@ -68,24 +68,27 @@ function ppo_render_order_form() {
                 class="ppo-hidden-file-input"
             >
             
-            <div class="ppo-option-group">
-                <label>Оберіть тип паперу:</label><br>
-                <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
-                <label for="finish-gloss">Глянцевий (gloss)</label>
-                
-                <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
-                <label for="finish-matte">Матовий (matte)</label>
-            </div>
+            <div id="ppo-format-options"> 
             
-            <div class="ppo-option-group">
-                <label>Оберіть наявність рамки:</label><br>
-                <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
-                <label for="frame-off">Без рамки (frameoff)</label>
+                <div class="ppo-option-group">
+                    <label>Оберіть тип паперу:</label><br>
+                    <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
+                    <label for="finish-gloss">Глянцевий (gloss)</label>
+                    
+                    <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
+                    <label for="finish-matte">Матовий (matte)</label>
+                </div>
                 
-                <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
-                <label for="frame-on">З рамкою (frameon)</label>
+                <div class="ppo-option-group">
+                    <label>Оберіть наявність рамки:</label><br>
+                    <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
+                    <label for="frame-off">Без рамки (frameoff)</label>
+                    
+                    <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
+                    <label for="frame-on">З рамкою (frameon)</label>
+                </div>
+                
             </div>
-            
             <label for="format">Оберіть формат фото:</label>
             <select name="format" id="format" required class="ppo-format-select">
                 <option value="">-- виберіть --</option>
@@ -162,7 +165,7 @@ function ppo_render_order_form() {
                                     $display_key .= ' (' . trim("{$finish_label}, {$frame_label}", ', ') . ')';
                                 }
                         ?>
-                            <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' копій, ' . number_format($details['total_price'], 2, '.', '') . ' грн'); ?></li>
+                                <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' копій, ' . number_format($details['total_price'], 2, '.', '') . ' грн'); ?></li>
                         <?php 
                             endif; 
                         endforeach; 
