@@ -33,6 +33,7 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
     
     try {
         // ВИПРАВЛЕНО: Ініціалізація класу 'LiqPay'
+        // Припускаємо, що клас LiqPay визначено у глобальному просторі імен, оскільки `use` видалено.
         $liqpay = new LiqPay($public_key, $private_key);
         
         $description = sprintf('Оплата замовлення фотодруку №%s', $ppo_order_id);
@@ -71,7 +72,8 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
 function ppo_render_payment_form() {
     // 1. Перевірка сесії
     if (empty($_SESSION['ppo_order_id']) || empty($_SESSION['ppo_total'])) {
-        return '<div class="ppo-order-form-container"><p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/orderpage/')) . '" class="ppo-button ppo-button-secondary">Повернутися до замовлення</a></div>';
+        // Додано контейнер для стилю
+        return '<div class="ppo-order-form-container"><div class="ppo-step-block"><p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/order/')) . '" class="ppo-button ppo-button-secondary">Повернутися до замовлення</a></div></div>';
     }
 
     $ppo_order_id = sanitize_text_field($_SESSION['ppo_order_id']);
@@ -138,7 +140,7 @@ function ppo_render_payment_result() {
     $order_query = new WP_Query($args);
     
     if (!$order_query->have_posts()) {
-        return '<div class="ppo-order-form-container"><p class="ppo-message ppo-message-error">Замовлення №' . esc_html($ppo_order_id) . ' не знайдено. Можливо, платіж ще оброблюється — перевірте пізніше або зверніться до підтримки.</p></div>';
+        return '<div class="ppo-order-form-container"><div class="ppo-step-block"><p class="ppo-message ppo-message-error">Замовлення №' . esc_html($ppo_order_id) . ' не знайдено. Можливо, платіж ще оброблюється — перевірте пізніше або зверніться до підтримки.</p></div></div>';
     }
 
     $order_post = $order_query->posts[0];
@@ -176,14 +178,18 @@ function ppo_render_payment_result() {
     </div>
     <?php
     
-    // Очищаємо сесію після відображення результату
+    // ОЧИЩЕННЯ СЕСІЇ ПІСЛЯ ЗАВЕРШЕННЯ ЗАМОВЛЕННЯ/ОПЛАТИ.
+    // Це вирішує проблему відображення залишків даних (суми '0') на сторінці нового замовлення.
     unset($_SESSION['ppo_order_id']);
     unset($_SESSION['ppo_total']);
+    unset($_SESSION['ppo_formats']); // Додано для повного очищення деталей замовлення
+    unset($_SESSION['ppo_contact_info']); // Додано для очищення контактних даних
+    unset($_SESSION['ppo_delivery_details_array']); // Додано для очищення деталей доставки
 
     return ob_get_clean();
 }
 
-// РЕЄСТРАЦІЯ ШОРТКОДУ (додайте це до ppo-render-payment.php, якщо він ще не підключений у photo-print-orders.php)
+// РЕЄСТРАЦІЯ ШОРТКОДУ 
 if (function_exists('add_shortcode')) {
     add_shortcode('ppo_payment_result', 'ppo_render_payment_result');
     add_shortcode('ppo_payment_form', 'ppo_render_payment_form');
