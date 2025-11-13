@@ -85,7 +85,7 @@ function ppo_render_payment_form() {
         <h2>💳 Крок 3: Оплата замовлення №<?php echo esc_html($ppo_order_id); ?></h2>
         
         <div class="ppo-step-block ppo-payment-info-block">
-            <h3>Деталі платежу</h3>
+            <h3>ДЕТАЛІ ПЛАТЕЖУ</h3>
             
             <p class="ppo-total-sum ppo-summary">Загальна сума до сплати: <strong><?php echo number_format($total_amount, 2, '.', ' '); ?> грн</strong></p>
 
@@ -103,7 +103,7 @@ function ppo_render_payment_form() {
         
         <div class="ppo-buttons-container ppo-back-link">
             <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">
-                &leftarrow; Повернутися до вибору доставки
+                ← НАЗАД 
             </a>
         </div>
         

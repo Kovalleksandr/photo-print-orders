@@ -71,26 +71,26 @@ function ppo_render_order_form() {
             
             <div id="ppo-step-1" class="ppo-step-block"> 
                 
-                <h3>1. Опції друку та формат</h3>
+                <h3>ОПЦІЇ ЗАМОВЛЕННЯ</h3>
 
                 <div id="ppo-format-options"> 
                 
                     <div class="ppo-option-group">
-                        <label>Оберіть тип паперу:</label><br>
+                        <label>ТИП ПАПЕРУ:</label><br>
                         <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
-                        <label for="finish-gloss">Глянцевий (Gloss)</label>
+                        <label for="finish-gloss">глянцевий</label>
                         
                         <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
-                        <label for="finish-matte">Матовий (Matte)</label>
+                        <label for="finish-matte">матовий</label>
                     </div>
                     
                     <div class="ppo-option-group">
-                        <label>Оберіть наявність рамки:</label><br>
+                        <label>РАМКА:</label><br>
                         <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
-                        <label for="frame-off">Без рамки</label>
+                        <label for="frame-off">без рамки</label>
                         
                         <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
-                        <label for="frame-on">З рамкою</label>
+                        <label for="frame-on">з рамкою</label>
                     </div>
                     
                     <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
@@ -110,10 +110,9 @@ function ppo_render_order_form() {
             
             <div id="ppo-step-2" class="ppo-step-block">
                 
-                <h3>2. Завантаження та копії</h3>
+                <h3>ЗАВАНТАЖЕННЯ ФОТО</h3>
 
                 <div id="photo-quantities-container" class="ppo-quantities-container">
-                    <h4>Кількість копій та видалення</h4>
                     <div id="photo-quantities" class="ppo-photo-quantities">
                         <p id="ppo-add-photos-link" class="ppo-add-photos-link">
                             Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
@@ -160,7 +159,7 @@ function ppo_render_order_form() {
                 $total_copies_overall = array_sum(array_column($display_formats, 'total_copies'));
             }
             ?>
-            <h3>Деталі замовлення:</h3>
+            <h3>ДЕТАЛІ ЗАМОВЛЕННЯ:</h3>
 
             <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
                 <ul id="ppo-formats-list" class="ppo-formats-list">
@@ -190,11 +189,11 @@ function ppo_render_order_form() {
                     Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
                 </p>
                 <div class="ppo-buttons-container">
+                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ВИДАЛИТИ ЗАМОВЛЕННЯ</a>
                     <form method="post" style="display: inline;">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
-                        <input type="submit" name="ppo_go_to_delivery" value="Оформіть доставку" class="ppo-button ppo-button-primary">
+                        <input type="submit" name="ppo_go_to_delivery" value="ОФОРМИТИ ДОСТАВКУ" class="ppo-button ppo-button-primary">
                     </form>
-                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">Видалити замовлення</a>
                 </div>
             </div>
         </div>

@@ -39,7 +39,7 @@ function ppo_render_delivery_form() {
             <?php wp_nonce_field('ppo_delivery_action', 'ppo_delivery_nonce'); ?>
         
             <div class="ppo-step-block ppo-contact-block">
-                <h3>Контактні дані отримувача</h3>
+                <h3>КОНТАКТІ ДАНІ ОТРИМУВАЧА</h3>
                 <div class="ppo-form-group">
                     <label for="contact_name">ПІБ (повністю)</label>
                     <input type="text" id="contact_name" name="contact_name" value="<?php echo esc_attr($contact_info['name'] ?? ''); ?>" required>
@@ -55,7 +55,7 @@ function ppo_render_delivery_form() {
             </div>
 
             <div class="ppo-step-block ppo-delivery-type-block">
-                <h3>Спосіб доставки</h3>
+                <h3>СПОСІБ ДОСТАВКИ</h3>
                 <div class="ppo-form-group">
                     <label>
                         <input type="radio" name="delivery_type" value="novaposhta_warehouse" checked required>
@@ -64,7 +64,7 @@ function ppo_render_delivery_form() {
                 </div>
         
                 <div id="np_delivery_fields">
-                    <h3>Адреса Нової Пошти</h3>
+                    <h3>АДРЕСА НОВОЇ ПОШТИ</h3>
             
                     <div class="ppo-form-group ppo-autocomplete-container">
                         <label for="np-city-name">Місто (Населений пункт)</label>
@@ -83,8 +83,8 @@ function ppo_render_delivery_form() {
             </div>
             
             <div class="ppo-buttons-container">
-                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">← Назад до форматів</a>
-                <input type="submit" name="ppo_delivery_submit" value="Далі: До оплати →" class="ppo-button ppo-button-primary">
+                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">← НАЗАД</a>
+                <input type="submit" name="ppo_delivery_submit" value="ДО ОПЛАТИ →" class="ppo-button ppo-button-primary">
             </div>
         </form>
 
