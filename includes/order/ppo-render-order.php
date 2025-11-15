@@ -73,9 +73,7 @@ function ppo_render_order_form() {
                 
                 <h3>ОПЦІЇ ЗАМОВЛЕННЯ</h3>
 
-                <div id="ppo-format-options"> 
-                
-                    <div class="ppo-option-group">
+                <div class="ppo-option-group">
                         <label>ТИП ПАПЕРУ:</label><br>
                         <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
                         <label for="finish-gloss">глянцевий</label>
@@ -105,44 +103,41 @@ function ppo_render_order_form() {
                         </select>
                     </div>
                     
-                </div>
             </div>
             
             <div id="ppo-step-2" class="ppo-step-block">
                 
                 <h3>ЗАВАНТАЖЕННЯ ФОТО</h3>
 
-                <div id="photo-quantities-container" class="ppo-quantities-container">
-                    <div id="photo-quantities" class="ppo-photo-quantities">
-                        <p id="ppo-add-photos-link" class="ppo-add-photos-link">
-                            Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
-                        </p>
+                <div id="photo-quantities" class="ppo-photo-quantities ppo-quantities-container">
+                    <p id="ppo-add-photos-link" class="ppo-add-photos-link">
+                         Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
+                    </p>
+                </div>
+                
+                <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
+                    Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
+                </p>
+
+                <p class="ppo-total-sum ppo-current-upload-summary-single">
+                    Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
+                </p>
+                <p class="ppo-total-sum ppo-current-upload-summary-total">
+                    Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
+                </p>
+
+                <div class="ppo-buttons-in-quantities">
+                    <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
+                    <div id="ppo-loader" class="ppo-loader"></div>
+                    
+                    <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
+                        <div id="ppo-progress-bar" class="ppo-progress-bar">
+                            <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
+                        </div>
+                        <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
                     </div>
                     
-                    <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
-                        Недостатня сума! Додайте більше фото або копій, щоб досягти мінімуму <?php echo $min_order_sum; ?> грн для цього формату.
-                    </p>
-
-                    <p class="ppo-total-sum ppo-current-upload-summary-single">
-                        Ви вибрали фото на суму: <span id="current-upload-sum">0</span> грн
-                    </p>
-                    <p class="ppo-total-sum ppo-current-upload-summary-total">
-                        Загальна сума для вибраного формату (з поточним): <span id="format-total-sum">0</span> грн (мін. <?php echo $min_order_sum; ?> грн)
-                    </p>
-
-                    <div class="ppo-buttons-in-quantities">
-                        <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
-                        <div id="ppo-loader" class="ppo-loader"></div>
-                        
-                        <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
-                            <div id="ppo-progress-bar" class="ppo-progress-bar">
-                                <div id="ppo-progress-fill" class="ppo-progress-fill"></div>
-                            </div>
-                            <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
-                        </div>
-                        
-                        <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
-                    </div>
+                    <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
                 </div>
             </div>
         </form>
