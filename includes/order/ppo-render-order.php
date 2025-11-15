@@ -29,9 +29,7 @@ function ppo_render_order_form() {
     }
     
     ?>
-    <div class="ppo-order-form-container">
-        
-        <div id="ppo-alert-messages">
+    <div class="ppo-form-wrapper"> <div id="ppo-alert-messages">
             <?php if (isset($_GET['error'])): ?>
                 <div class="ppo-message ppo-message-error"><p><?php echo esc_html(urldecode($_GET['error'])); ?></p></div>
             <?php endif; ?>
@@ -69,32 +67,38 @@ function ppo_render_order_form() {
                 class="ppo-hidden-file-input"
             >
             
-            <div id="ppo-step-1" class="ppo-step-block"> 
+            <div id="ppo-step-1" class="ppo-step-block ppo-options-block"> <h2>ОПЦІЇ ЗАМОВЛЕННЯ</h2> <div id="ppo-format-options"> 
                 
-                <h3>ОПЦІЇ ЗАМОВЛЕННЯ</h3>
-
-                <div id="ppo-format-options"> 
-                
-                    <div class="ppo-option-group">
-                        <label>ТИП ПАПЕРУ:</label><br>
-                        <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
-                        <label for="finish-gloss">глянцевий</label>
-                        
-                        <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
-                        <label for="finish-matte">матовий</label>
+                    <div> <strong>ТИП ПАПЕРУ:</strong>
+                        <div class="ppo-option-group">
+                            <div class="ppo-option-item">
+                                <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
+                                <label for="finish-gloss">глянцевий</label>
+                            </div>
+                            
+                            <div class="ppo-option-item">
+                                <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
+                                <label for="finish-matte">матовий</label>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="ppo-option-group">
-                        <label>РАМКА:</label><br>
-                        <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
-                        <label for="frame-off">без рамки</label>
-                        
-                        <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
-                        <label for="frame-on">з рамкою</label>
+                    <div> <strong>РАМКА:</strong>
+                        <div class="ppo-option-group">
+                            <div class="ppo-option-item">
+                                <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
+                                <label for="frame-off">без рамки</label>
+                            </div>
+                            
+                            <div class="ppo-option-item">
+                                <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
+                                <label for="frame-on">з рамкою</label>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-                        <label for="format">Оберіть формат фото:</label>
+                        <strong>Оберіть формат фото:</strong>
                         <select name="format" id="format" required class="ppo-format-select">
                             <option value="">-- виберіть --</option>
                             <?php foreach ($photo_prices as $format => $price): ?>
@@ -108,11 +112,7 @@ function ppo_render_order_form() {
                 </div>
             </div>
             
-            <div id="ppo-step-2" class="ppo-step-block">
-                
-                <h3>ЗАВАНТАЖЕННЯ ФОТО</h3>
-
-                <div id="photo-quantities-container" class="ppo-quantities-container">
+            <div id="ppo-step-2" class="ppo-step-block ppo-upload-block"> <h2>ЗАВАНТАЖЕННЯ ФОТО </h2> <div id="photo-quantities-container" class="ppo-quantities-container">
                     <div id="photo-quantities" class="ppo-photo-quantities">
                         <p id="ppo-add-photos-link" class="ppo-add-photos-link">
                             Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
@@ -131,8 +131,7 @@ function ppo_render_order_form() {
                     </p>
 
                     <div class="ppo-buttons-in-quantities">
-                        <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
-                        <div id="ppo-loader" class="ppo-loader"></div>
+                        <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>ЗБЕРЕГТИ ЗАМОВЛЕННЯ</button> <div id="ppo-loader" class="ppo-loader"></div>
                         
                         <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
                             <div id="ppo-progress-bar" class="ppo-progress-bar">
@@ -141,14 +140,12 @@ function ppo_render_order_form() {
                             <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
                         </div>
                         
-                        <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
-                    </div>
+                        <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">ОЧИСТИТИ</button> </div>
                 </div>
             </div>
         </form>
 
-        <div id="ppo-summary" class="ppo-step-block ppo-summary-block">
-            <?php 
+        <div id="ppo-summary" class="ppo-step-block ppo-summary-block"> <?php 
             $session_formats = array_filter($_SESSION['ppo_formats'] ?? [], 'is_array');
             $has_order = !empty($session_formats);
             $total_copies_overall = 0;
@@ -159,9 +156,7 @@ function ppo_render_order_form() {
                 $total_copies_overall = array_sum(array_column($display_formats, 'total_copies'));
             }
             ?>
-            <h3>ДЕТАЛІ ЗАМОВЛЕННЯ:</h3>
-
-            <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
+            <h2>ДЕТАЛІ ЗАМОВЛЕННЯ:</h2> <div id="ppo-formats-list-container" class="ppo-formats-list-container" style="<?php echo $has_order ? '' : 'display: none;'; ?>">
                 <ul id="ppo-formats-list" class="ppo-formats-list">
                     <?php if ($has_order): ?>
                         <?php 
@@ -174,32 +169,36 @@ function ppo_render_order_form() {
                                 $finish_label = get_option_label($key_parts[1] ?? '');
                                 $frame_label = get_option_label($key_parts[2] ?? '');
                                 $display_key = $format_name;
-                                if ($finish_label || $frame_label) {
-                                    $display_key .= ' (' . trim("{$finish_label}, {$frame_label}", ', ') . ')';
+                                
+                                $option_labels = array_filter([$finish_label, $frame_label]);
+                                if (!empty($option_labels)) {
+                                    $display_key .= ' (' . implode(', ', $option_labels) . ')';
                                 }
                         ?>
-                                <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' копій, ' . number_format($details['total_price'], 2, '.', '') . ' грн'); ?></li>
+                                <li>
+                                    <strong><?php echo esc_html($display_key); ?>:</strong> 
+                                    <?php echo esc_html($details['total_copies']); ?> копій, 
+                                    <span class="ppo-price"><?php echo esc_html(number_format($details['total_price'], 2, '.', '')); ?> грн</span>
+                                </li>
                         <?php 
                             endif; 
                         endforeach; 
                         ?>
                     <?php endif; ?>
                 </ul>
-                <p class="ppo-total-sum">
-                    Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
+                <p id="ppo-summary-empty-message" style="<?php echo $has_order ? 'display: none;' : ''; ?>">
+                    Ваше замовлення поки порожнє. Додайте перший формат та фотографії.
                 </p>
+                <div class="ppo-session-total-container"> Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
+                </div>
                 <div class="ppo-buttons-container">
-                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ВИДАЛИТИ ЗАМОВЛЕННЯ</a>
-                    <form method="post" style="display: inline;">
+                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button-secondary ppo-clear-session-link">ВИДАЛИТИ ЗАМОВЛЕННЯ</a> <form method="post" style="display: inline;">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
-                        <input type="submit" name="ppo_go_to_delivery" value="ОФОРМИТИ ДОСТАВКУ" class="ppo-button ppo-button-primary">
-                    </form>
+                        <input type="submit" name="ppo_go_to_delivery" value="ОФОРМИТИ ДОСТАВКУ" class="ppo-button-primary"> </form>
                 </div>
             </div>
         </div>
-    </div>
-
-    <?php
+    </div> <?php
     
     return ob_get_clean();
 }
