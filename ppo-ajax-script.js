@@ -4,17 +4,29 @@ jQuery(document).ready(function($) {
     // 0. КОНСТАНТИ, ХЕЛПЕРИ ТА ЗМІННІ
     // ====================================================================
 
-    // --- Функція для контролю видимості опцій формату (Крок 1)
-    function toggleFormatOptionsVisibility() {
-        const optionsContainer = document.getElementById('ppo-step-1') || document.getElementById('ppo-format-options');
+    /**
+     * Функція для отримання значення обраного формату
+     */
+    function getSelectedFormatValue() {
+        return $('input[name="format"]:checked').val();
+    }
 
+    /**
+     * Функція для контролю видимості опцій формату (Крок 1)
+     */
+    function toggleFormatOptionsVisibility() {
+        const optionsContainer = document.getElementById('ppo-step-1'); 
         if (!optionsContainer) { return; }
 
-        const hasPhotos = accumulatedFiles.files.length > 0;
-
-        if (hasPhotos) {
+        const hasFiles = accumulatedFiles.files.length > 0;
+        
+        // ВИПРАВЛЕНО: Крок 1 (вибір формату) має бути видимим,
+        // якщо немає завантажених файлів, незалежно від того, чи був обраний формат раніше.
+        if (hasFiles) {
+            // Якщо є файли (Крок 2 активний), приховуємо Крок 1
             optionsContainer.style.display = 'none';
         } else {
+            // Якщо немає файлів (сторінка перезавантажена або очищена), показуємо Крок 1
             optionsContainer.style.display = '';
         }
     }
@@ -24,10 +36,10 @@ jQuery(document).ready(function($) {
      */
     function getOptionLabel(key) {
         const map = {
-            'gloss': 'Глянець',
+            'glossy': 'Глянець',
             'matte': 'Матовий',
-            'frameoff': 'Без рамки',
-            'frameon': 'З рамкою',
+            'none': 'Без рамки',
+            'yes': 'З рамкою',
         };
         return map[key] ?? '';
     }
@@ -49,26 +61,25 @@ jQuery(document).ready(function($) {
     
     // --- Елементи DOM ---
     const $form = $('#photo-print-order-form');
-    const $formatSelect = $('#format');
     
-    const $finishOptions = $('input[name="ppo_finish_option"]'); // Глянець/Матовий
-    const $frameOptions = $('input[name="ppo_frame_option"]');   // Рамка/Без рамки
+    const $finishOptions = $('input[name="paper"]'); 
+    const $frameOptions = $('input[name="frame"]'); 
     
     const $quantitiesContainer = $('#photo-quantities');
-    const $quantitiesParent = $('#ppo-step-2') || $('#photo-quantities-container'); 
+    const $quantitiesParent = $('#ppo-step-2'); 
 
     const $currentUploadSum = $('#current-upload-sum');
     const $formatTotalSum = $('#format-total-sum');
     const $sumWarning = $('#sum-warning');
     const $submitButton = $('#submit-order');
     const $loader = $('#ppo-loader');
-    const $messages = $('#ppo-alert-messages');
+    const $messages = $('#ppo-alert-messages'); 
     const $clearFormButton = $('#clear-form');
     
     const $currentUploadSummarySingle = $('.ppo-current-upload-summary-single');
     const $currentUploadSummaryTotal = $('.ppo-current-upload-summary-total');
 
-    const $hiddenFileInput = $('#ppo-hidden-file-input'); // Приховане поле для файлів
+    const $hiddenFileInput = $('#ppo-hidden-file-input'); 
     
     // ІНТЕГРОВАНО: Елементи для прогресу
     const $progressContainer = $('#ppo-progress-container');
@@ -76,7 +87,7 @@ jQuery(document).ready(function($) {
     const $progressText = $('#ppo-progress-text');
 
     // ІНТЕГРОВАНО: Елементи для модального вікна (success/error)
-    const $successModal = $('#ppo-success-modal');
+    const $successModal = $('#ppo-success-modal'); 
     const $modalMessage = $('#ppo-modal-message');
     const $modalClose = $('.ppo-modal-close');
     const $modalOk = $('#ppo-modal-ok');
@@ -125,16 +136,16 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Формує повний ключ формату: {format}_{finish}_{frame}
+     * Формує повний ключ формату: {format}_{paper}_{frame}
      */
     function getFullFormatKey(format) {
-        const finish = $('input[name="ppo_finish_option"]:checked').val() || '';
-        const frame = $('input[name="ppo_frame_option"]:checked').val() || '';
-        return `${format}_${finish}_${frame}`;
+        const paper = $('input[name="paper"]:checked').val() || '';
+        const frame = $('input[name="frame"]:checked').val() || '';
+        return `${format}_${paper}_${frame}`;
     }
 
     // ====================================================================
-    // 3. ФУНКЦІЯ ОНОВЛЕННЯ ДЕТАЛЕЙ ЗАМОВЛЕННЯ
+    // 3. ФУНКЦІЯ ОНОВЛЕННЯ ДЕТАЛЕЙ ЗАМОВЛЕННЯ (Підсумок)
     // ====================================================================
     
     /**
@@ -160,12 +171,12 @@ jQuery(document).ready(function($) {
                 
                 const parts = key.split('_');
                 const formatName = parts[0];
-                const finishLabel = getOptionLabel(parts[1] ?? '');
+                const paperLabel = getOptionLabel(parts[1] ?? '');
                 const frameLabel = getOptionLabel(parts[2] ?? '');
                 let displayKey = formatName;
                 
-                if (finishLabel || frameLabel) {
-                     displayKey += ' (' + [finishLabel, frameLabel].filter(Boolean).join(', ') + ')';
+                if (paperLabel || frameLabel) {
+                     displayKey += ' (' + [paperLabel, frameLabel].filter(Boolean).join(', ') + ')';
                 }
                 
                 const listItem = $('<li>').html(`
@@ -191,8 +202,9 @@ jQuery(document).ready(function($) {
      * Перераховує загальну суму для поточного формату та оновлює DOM.
      */
     function updateCurrentUploadSummary() {
-        const selectedFormat = $formatSelect.val();
+        const selectedFormat = getSelectedFormatValue(); 
         
+        // Крок 2 приховуємо, якщо немає обраного формату
         if (!selectedFormat) {
             $currentUploadSummarySingle.hide();
             $currentUploadSummaryTotal.hide();
@@ -202,7 +214,8 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        if (accumulatedFiles.files.length > 0 || selectedFormat) {
+        // Відображаємо Крок 2, якщо формат обраний
+        if (selectedFormat) { 
              $quantitiesParent.show(); 
         } else {
              $quantitiesParent.hide();
@@ -266,7 +279,7 @@ jQuery(document).ready(function($) {
      * Рендерить список обраних файлів з полями для копій (з накопичених файлів)
      */
     function renderFileQuantities(newFiles = null) {
-        if (!$formatSelect.val()) {
+        if (!getSelectedFormatValue()) { 
             return;
         }
 
@@ -285,7 +298,6 @@ jQuery(document).ready(function($) {
         $quantitiesContainer.show();
 
         if (currentFiles.length === 0) {
-            // Тут використовуємо ID 'ppo-add-photos-link', який буде оброблено делегованим обробником
             const $link = $('<p>')
                 .attr('id', 'ppo-add-photos-link')
                 .addClass('ppo-add-photos-link')
@@ -302,10 +314,8 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        // Додаємо кнопку "Додати ще" в кінець списку 
         let addLinkText = `Натисніть тут, щоб додати ще фото (додано ${currentFiles.length} з ${maxFiles})`;
         
-        // Тут також використовуємо ID 'ppo-add-photos-link' для делегованого обробника
         const $addMoreLink = $('<p>')
             .attr('id', 'ppo-add-photos-link')
             .addClass('ppo-add-photos-link')
@@ -317,7 +327,7 @@ jQuery(document).ready(function($) {
                 'text-decoration': currentFiles.length >= maxFiles ? 'none' : 'underline',
                 'font-weight': 'bold',
                 'padding': '10px 0'
-            }); // *** ВИДАЛЕНО ПРЯМИЙ ОБРОБНИК .on('click', ...) ***
+            }); 
             
         $.each(currentFiles, function(i, file) {
             const $item = $('<div class="photo-item">');
@@ -386,14 +396,16 @@ jQuery(document).ready(function($) {
     // 5. ОБРОБНИКИ ПОДІЙ
     // ====================================================================
     
-    // *** ВИПРАВЛЕНО: Залишаємо ТІЛЬКИ ДЕЛЕГОВАНИЙ ОБРОБНИК для посилання завантаження ***
+    // Обробник кліку на посилання завантаження
     $quantitiesContainer.on('click', '#ppo-add-photos-link', function(e) {
         e.preventDefault();
         
         const currentFiles = accumulatedFiles.files;
         const maxFiles = maxFilesPerUpload; 
 
-        if (!$formatSelect.val()) {
+        const selectedFormat = getSelectedFormatValue(); 
+
+        if (!selectedFormat) {
             displayMessage('Будь ласка, спочатку оберіть формат фото.', 'warning');
             return;
         }
@@ -407,24 +419,25 @@ jQuery(document).ready(function($) {
     
     // Обробник зміни опцій (тип паперу або рамка)
     function handleOptionChange() {
-         accumulatedFiles = new DataTransfer();
-         $hiddenFileInput[0].files = accumulatedFiles.files;
-         $formatSelect.val('');
-         
-         $quantitiesContainer.empty();
-         const $warningLink = $('<p>')
+        // Змінюємо опції - скидаємо вибір формату
+        $('input[name="format"]').prop('checked', false); 
+        
+        accumulatedFiles = new DataTransfer();
+        $hiddenFileInput[0].files = accumulatedFiles.files;
+        
+        $quantitiesContainer.empty();
+        const $warningLink = $('<p>')
              .attr('id', 'ppo-add-photos-link')
              .addClass('ppo-add-photos-link')
              .css({'text-align': 'center', 'color': '#cc0000', 'font-weight': 'bold', 'padding': '10px 0'})
              .text('УВАГА! Опції змінено. Оберіть формат та додайте фото заново.');
-             // Прямий обробник кліку тут також не потрібен, делегований обробник його зловить
-         
-         $quantitiesContainer.html($warningLink).show(); 
-         $quantitiesParent.hide();
-         
-         updateCurrentUploadSummary();
-         displayMessage('Вибір опцій впливає на назву папки. Будь ласка, оберіть формат та додайте фото заново.', 'warning');
-         toggleFormatOptionsVisibility();
+        
+        $quantitiesContainer.html($warningLink).show(); 
+        $quantitiesParent.hide();
+        
+        updateCurrentUploadSummary();
+        displayMessage('Вибір опцій впливає на назву папки. Будь ласка, оберіть формат та додайте фото заново.', 'warning');
+        toggleFormatOptionsVisibility();
     }
 
     $finishOptions.on('change', handleOptionChange);
@@ -442,7 +455,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         $(this).removeClass('drag-over');
         
-        const selectedFormat = $formatSelect.val();
+        const selectedFormat = getSelectedFormatValue(); 
         const droppedFiles = e.originalEvent.dataTransfer.files;
         
         clearMessages();
@@ -459,25 +472,28 @@ jQuery(document).ready(function($) {
         renderFileQuantities(droppedFiles); 
     });
 
-    // 1. При виборі формату 
-    $formatSelect.on('change', function() {
+    // 1. При виборі формату (ОБРОБНИК ДЛЯ РАДІО-КНОПОК)
+    $('input[name="format"]').on('change', function() { 
         accumulatedFiles = new DataTransfer();
         $hiddenFileInput[0].files = accumulatedFiles.files;
         
         renderFileQuantities(); 
 
-        const selectedFormat = $(this).val();
+        const selectedFormat = getSelectedFormatValue(); 
+        
         if (selectedFormat) {
-             $quantitiesParent.show();
+            $quantitiesParent.show();
         } else {
-             $quantitiesParent.hide();
+            $quantitiesParent.hide();
         }
+        
         updateCurrentUploadSummary(); 
+        toggleFormatOptionsVisibility();
     });
 
     // 2. При виборі файлів
     $hiddenFileInput.on('change', function() { 
-        const selectedFormat = $formatSelect.val();
+        const selectedFormat = getSelectedFormatValue(); 
         const newFiles = this.files; 
 
         clearMessages();
@@ -500,12 +516,14 @@ jQuery(document).ready(function($) {
     $clearFormButton.on('click', function(e) {
         e.preventDefault();
         
-        $('#finish-gloss').prop('checked', true);
-        $('#frame-off').prop('checked', true);
+        // Скидання опцій
+        $('#paper-g').prop('checked', true); 
+        $('#frame-none').prop('checked', true); 
+        
+        $('input[name="format"]').prop('checked', false); 
         
         accumulatedFiles = new DataTransfer();
         $hiddenFileInput[0].files = accumulatedFiles.files;
-        $formatSelect.val(''); 
         
         renderFileQuantities();
 
@@ -536,7 +554,7 @@ jQuery(document).ready(function($) {
         }
         
         // Перевірка мінімальної суми 
-        const selectedFormat = $formatSelect.val();
+        const selectedFormat = getSelectedFormatValue(); 
         const fullFormatKey = getFullFormatKey(selectedFormat);
         const pricePerPhoto = parseFloat(prices[selectedFormat] || 0);
         let currentUploadTotalPrice = 0;
@@ -573,9 +591,9 @@ jQuery(document).ready(function($) {
         formData.append('action', 'ppo_file_upload');
         formData.append('ppo_ajax_nonce', nonce);
         
-        formData.append('format', $formatSelect.val());
-        formData.append('ppo_finish_option', $('input[name="ppo_finish_option"]:checked').val());
-        formData.append('ppo_frame_option', $('input[name="ppo_frame_option"]:checked').val());
+        formData.append('format', getSelectedFormatValue()); 
+        formData.append('paper', $('input[name="paper"]:checked').val());
+        formData.append('frame', $('input[name="frame"]:checked').val());
         
         for (let i = 0; i < accumulatedFiles.files.length; i++) { 
              formData.append('photos[]', accumulatedFiles.files[i]);
@@ -623,9 +641,13 @@ jQuery(document).ready(function($) {
                 accumulatedFiles = new DataTransfer();
                 $hiddenFileInput[0].files = accumulatedFiles.files;
                 $quantitiesContainer.empty();
-                $formatSelect.val(''); 
-                $('#finish-gloss').prop('checked', true);
-                $('#frame-off').prop('checked', true);
+                
+                // Скидання вибору формату (радіо-кнопок)
+                $('input[name="format"]').prop('checked', false); 
+                
+                // Скидання опцій
+                $('#paper-g').prop('checked', true);
+                $('#frame-none').prop('checked', true);
 
                 if (response.success) {
                     sessionFormats = response.data.formats;
@@ -660,8 +682,10 @@ jQuery(document).ready(function($) {
                 $submitButton.prop('disabled', false).text('Зберегти замовлення');
                 $clearFormButton.prop('disabled', false);
 
+                // Очищаємо тільки накопичені файли, залишаючи обраний формат (якщо був)
                 accumulatedFiles = new DataTransfer();
                 $hiddenFileInput[0].files = accumulatedFiles.files;
+                
                 renderFileQuantities();
                 updateCurrentUploadSummary();
                 toggleFormatOptionsVisibility();
@@ -673,7 +697,7 @@ jQuery(document).ready(function($) {
     // 6. ІНІЦІАЛІЗАЦІЯ
     // ====================================================================
     
-    if (!$formatSelect.val()) {
+    if (!getSelectedFormatValue()) {
         $quantitiesParent.hide(); 
     }
     updateCurrentUploadSummary(); 

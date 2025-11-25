@@ -74,34 +74,55 @@ function ppo_render_order_form() {
                 <h3>ОПЦІЇ ЗАМОВЛЕННЯ</h3>
 
                 <div class="ppo-option-group">
-                        <label>ТИП ПАПЕРУ:</label><br>
-                        <input type="radio" id="finish-gloss" name="ppo_finish_option" value="gloss" checked>
-                        <label for="finish-gloss">глянцевий</label>
-                        
-                        <input type="radio" id="finish-matte" name="ppo_finish_option" value="matte">
-                        <label for="finish-matte">матовий</label>
+                    <label>ТИП ПАПЕРУ:</label>
+                    <div class="ppo-segmented-control">
+                        <input type="radio" name="paper" id="paper-g" value="glossy" checked>
+                        <label for="paper-g">Глянцевий</label> 
+
+                        <input type="radio" name="paper" id="paper-m" value="matte">
+                        <label for="paper-m">Матовий</label>
                     </div>
-                    
-                    <div class="ppo-option-group">
-                        <label>РАМКА:</label><br>
-                        <input type="radio" id="frame-off" name="ppo_frame_option" value="frameoff" checked>
-                        <label for="frame-off">без рамки</label>
-                        
-                        <input type="radio" id="frame-on" name="ppo_frame_option" value="frameon">
-                        <label for="frame-on">з рамкою</label>
+                </div>
+
+                <div class="ppo-option-group">
+                    <label>РАМКА:</label>
+                    <div class="ppo-segmented-control">
+                        <input type="radio" name="frame" id="frame-none" value="none" checked>
+                        <label for="frame-none">Без рамки</label>
+
+                        <input type="radio" name="frame" id="frame-yes" value="yes">
+                        <label for="frame-yes">З рамкою</label>
                     </div>
-                    
-                    <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-                        <label for="format">Оберіть формат фото:</label>
-                        <select name="format" id="format" required class="ppo-format-select">
-                            <option value="">-- виберіть --</option>
-                            <?php foreach ($photo_prices as $format => $price): ?>
-                                <option value="<?php echo esc_attr($format); ?>" data-price="<?php echo esc_attr($price); ?>">
-                                    <?php echo esc_html($format . " см — " . $price . " грн/шт"); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                </div>
+                <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                    <label>Оберіть формат фото:</label>
+                    <div class="ppo-format-button-list">
+                        <?php 
+                            $first_format = true;
+                            foreach ($photo_prices as $format => $price): 
+                        ?>
+                            <div class="ppo-format-item">
+                                <input 
+                                    type="radio" 
+                                    name="format" 
+                                    id="format-<?php echo esc_attr($format); ?>" 
+                                    value="<?php echo esc_attr($format); ?>" 
+                                    data-price="<?php echo esc_attr($price); ?>"
+                                    <?php if ($first_format) { echo 'checked'; $first_format = false; } ?>
+                                >
+                                <label for="format-<?php echo esc_attr($format); ?>" class="ppo-format-label">
+                                    <span class="ppo-format-name"><?php echo esc_html($format . " см"); ?></span>
+                                </label>
+                                
+                                <span class="ppo-price-circle">
+                                    <span class="ppo-price-value"><?php echo esc_html($price); ?></span>
+                                    <span class="ppo-currency-badge">грн</span>
+                                </span>
+                                
+                            </div>
+                        <?php endforeach; ?>
                     </div>
+                </div>
                     
             </div>
             
@@ -111,7 +132,7 @@ function ppo_render_order_form() {
 
                 <div id="photo-quantities" class="ppo-photo-quantities ppo-quantities-container">
                     <p id="ppo-add-photos-link" class="ppo-add-photos-link">
-                         Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
+                            Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
                     </p>
                 </div>
                 

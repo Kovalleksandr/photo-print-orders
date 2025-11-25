@@ -1,5 +1,33 @@
+/* ==================================================================== */
+/* 0. ГЛОБАЛЬНІ НАЛАШТУВАННЯ ТА ШРИФТ MONTSERRAT */
+/* ==================================================================== */
+
+/* Визначаємо колірну палітру для легкої зміни */
+:root {
+    --ppo-primary-color: #0073aa; /* Основний синій (колір кнопок) */
+    --ppo-secondary-color: #005177; /* Темніший синій для ховеру */
+    --ppo-text-color: #333;
+    --ppo-white: #ffffff;
+    --ppo-light-gray: #e0e0e0;
+    --ppo-red-badge: #dc3545; /* НОВЕ: Червоний колір для плашки "грн" */
+}
+
+/* Припускаємо, що Montserrat підключено у вашій темі. */
+body, .ppo-order-form-container {
+    /* Використовуємо тонкий шрифт */
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 300; 
+}
+.ppo-order-form-container h3, 
+.ppo-order-form-container h4, 
+.ppo-order-form-container .ppo-button,
+.ppo-order-form-container .ppo-total-sum {
+    font-weight: 500; /* Середня товщина для заголовків та важливих елементів */
+}
+
+
 /* --------------------------------------------------------------------------------
- * ВИПРАВЛЕННЯ: Глобальні стилі для кнопок (Збережено ваш стиль)
+ * Глобальні стилі для кнопок
  * -------------------------------------------------------------------------------- */
 .ppo-button { 
     display: inline-block !important; 
@@ -9,30 +37,31 @@
     border-radius: 3px; 
     font-size: 14px; 
     visibility: visible !important; 
-    cursor: pointer; /* Додано для зручності */
-    transition: background 0.2s; /* Додано для плавності */
+    cursor: pointer; 
+    transition: background 0.2s; 
 }
 .ppo-button-primary { 
-    background: #0073aa; 
-    color: white; 
+    background: var(--ppo-primary-color); 
+    color: var(--ppo-white); 
+    border: none;
 }
 .ppo-button-primary:hover {
-    background: #005177;
+    background: var(--ppo-secondary-color);
 }
 .ppo-button-secondary { 
     background: #f7f7f7; 
-    color: #0073aa; 
-    border: 1px solid #0073aa; 
+    color: var(--ppo-primary-color); 
+    border: 1px solid var(--ppo-primary-color); 
 }
 .ppo-button-secondary:hover {
     background: #e0e0e0;
 }
 
 /* --------------------------------------------------------------------------------
- * Стилі для PPO Order Form (Загальні, Крок 1, Крок 3)
+ * Стилі для PPO Order Form (Загальні)
  * -------------------------------------------------------------------------------- */
 .ppo-order-form-container .ppo-total-sum {
-    font-weight: bold;
+    font-weight: 500;
     margin: 10px 0;
 }
 .ppo-order-form-container .ppo-buttons-container {
@@ -42,7 +71,7 @@
     padding: 10px;
     margin: 10px 0;
     border-radius: 3px;
-    border-left: 5px solid; /* Візуальний індикатор типу */
+    border-left: 5px solid; 
 }
 .ppo-order-form-container .ppo-message-success {
     color: green;
@@ -63,7 +92,7 @@
     display: none;
     margin-left: 10px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #0073aa;
+    border-top: 3px solid var(--ppo-primary-color);
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -74,7 +103,7 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Стилі для списку фото (Крок 1) */
+/* Стилі для списку фото */
 .ppo-order-form-container #photo-quantities {
     margin-top: 10px;
     border: 1px solid #ccc;
@@ -95,7 +124,7 @@
     border-bottom: none;
 }
 .ppo-order-form-container .photo-item label {
-    font-weight: normal;
+    font-weight: 300; 
     font-size: 0.9em;
     display: inline-block;
     width: 40%;
@@ -138,19 +167,12 @@
 .ppo-order-form-container .ppo-clear-session-link {
     margin-bottom: 15px;
 }
-.ppo-order-form-container .ppo-format-select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-}
 .ppo-order-form-container .ppo-add-photos-link {
     text-align: center;
-    color: #0073aa;
+    color: var(--ppo-primary-color);
     cursor: pointer;
     text-decoration: underline;
-    font-weight: bold;
+    font-weight: 500;
     padding: 10px 0;
 }
 .ppo-order-form-container .ppo-quantities-container {
@@ -168,7 +190,7 @@
     margin-top: 15px;
 }
 .ppo-order-form-container .ppo-formats-list-container {
-    display: none; /* Динамічно через JS/PHP */
+    display: none; 
 }
 .ppo-order-form-container .ppo-summary form {
     display: inline;
@@ -179,7 +201,7 @@
 
 
 /* ==================================================================== */
-/* 2. НОВІ СТИЛІ ДЛЯ ВІЗУАЛЬНОГО ВІДДІЛЕННЯ БЛОКІВ */
+/* 2. СТИЛІ ДЛЯ ВІЗУАЛЬНОГО ВІДДІЛЕННЯ БЛОКІВ */
 /* ==================================================================== */
 
 /* Стиль для кожного етапу (Крок 1, Крок 2, Підсумок) */
@@ -188,20 +210,18 @@
     border-radius: 8px;
     margin-bottom: 20px;
     border: 1px solid #e0e0e0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Легка тінь */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); 
 }
 
-/* Візуальне розділення контейнерів (Тепер для ppo-step-block) */
+/* Візуальне розділення контейнерів */
 .ppo-order-form-container #ppo-step-1 {
-    background-color: #fcf5e6;  /* Легкий блакитний фон для Кроку 1 */
+    background-color: #fcf5e6; 
 }
-
 .ppo-order-form-container #ppo-step-2 {
-    background-color: #f0f8ff;  /* Легкий блакитний фон для Кроку 2 */
+    background-color: #f0f8ff; 
 }
-
 .ppo-order-form-container #ppo-summary {
-    background-color: #f0fff0;  /* Легкий зелений фон для підсумку */
+    background-color: #f0fff0; 
 }
 
 /* Прибираємо стилі з елементів, які тепер стилізуються через .ppo-step-block */
@@ -216,19 +236,20 @@
 /* Додаткові стилі для кращого розділення */
 .ppo-order-form-container h3,
 .ppo-order-form-container #ppo-summary h3 {
-    color: #0073aa;
-    border-bottom: 2px solid #0073aa;
+    color: var(--ppo-primary-color);
+    border-bottom: 2px solid var(--ppo-primary-color);
     padding-bottom: 5px;
     margin-bottom: 15px;
-    margin-top: 0; /* Щоб заголовок був одразу у блоці */
+    margin-top: 0; 
+    font-weight: 500;
 }
 
 .ppo-order-form-container #photo-print-order-form h4 {
-    /* Цей стиль залишаємо для внутрішнього заголовка Крок 2 */
-    color: #0073aa;
-    border-bottom: 2px solid #0073aa;
+    color: var(--ppo-primary-color);
+    border-bottom: 2px solid var(--ppo-primary-color);
     padding-bottom: 5px;
     margin-bottom: 15px;
+    font-weight: 500;
 }
 
 
@@ -239,16 +260,16 @@
 /* Забезпечуємо стилізацію для об'єднаного блоку опцій (папір, рамка, формат) */
 .ppo-order-form-container #ppo-format-options {
     padding: 15px;
-    border: 1px dashed #0073aa; /* Чіткіше відділення опцій всередині Кроку 1 */
+    border: 1px dashed var(--ppo-primary-color); 
     border-radius: 4px;
-    background-color: #ffffff; /* Білий фон всередині блакитного блоку */
+    background-color: var(--ppo-white); 
     margin-bottom: 15px;
 }
 
 .ppo-option-group { 
     margin-bottom: 15px; 
     padding-bottom: 15px; 
-    border-bottom: 1px solid #eee; /* Роздільник між опціями */
+    border-bottom: 1px solid #eee; 
 }
 .ppo-option-group:last-child {
     border-bottom: none;
@@ -256,18 +277,19 @@
     margin-bottom: 0;
 }
 .ppo-option-group label {
-    font-weight: bold;
+    font-weight: 500;
     display: block;
     margin-bottom: 5px;
 }
+/* ВАЖЛИВО: Стилі для міток, які не є частиною тумблера, ігноруються, коли він використовується. */
 .ppo-option-group label[for] {
-    font-weight: normal;
+    font-weight: 300;
     display: inline-block;
     margin-right: 15px;
 }
 
 
-/* ІНТЕГРОВАНО: Стилі для прогрес-бару (Крок 1) */
+/* ІНТЕГРОВАНО: Стилі для прогрес-бару */
 .ppo-order-form-container .ppo-progress-container { 
     width: 100%; 
     margin: 10px 0; 
@@ -282,7 +304,7 @@
 .ppo-order-form-container .ppo-progress-fill { 
     width: 0%; 
     height: 100%; 
-    background: #0073aa; 
+    background: var(--ppo-primary-color); 
     transition: width 0.3s ease; 
 }
 .ppo-order-form-container .ppo-progress-text { 
@@ -290,23 +312,24 @@
     text-align: center; 
     margin-top: 5px; 
     font-size: 14px; 
-    color: #0073aa; 
+    color: var(--ppo-primary-color); 
+    font-weight: 500;
 }
 
-/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) (Крок 1) */
+/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) */
 .ppo-order-form-container .ppo-quantities-container.drag-over { 
-    border: 2px dashed #0073aa; 
+    border: 2px dashed var(--ppo-primary-color); 
     background: #f9f9f9; 
     padding: 20px; 
     text-align: center; 
     border-radius: 4px; 
 }
 .ppo-order-form-container .ppo-quantities-container.drag-over p { 
-    color: #0073aa; 
+    color: var(--ppo-primary-color); 
     font-size: 16px; 
 }
 
-/* ФІКС: Анімація для "обробки" після upload (Крок 1) */
+/* ФІКС: Анімація для "обробки" після upload */
 .ppo-progress-fill.processing {
     animation: pulse 1.5s infinite; 
 }
@@ -361,8 +384,9 @@
 }
 .ppo-modal-header h2 {
     margin: 0;
-    color: #0073aa;
+    color: var(--ppo-primary-color);
     font-size: 18px;
+    font-weight: 500;
 }
 .ppo-modal-close {
     color: #aaa;
@@ -382,6 +406,7 @@
     margin: 0;
     font-size: 14px;
     line-height: 1.4;
+    font-weight: 300;
 }
 .ppo-modal-footer {
     padding: 12px;
@@ -392,102 +417,231 @@ body.ppo-modal-open {
     overflow: hidden;
 }
 
-/* --------------------------------------------------------------------------------
- * Стилі для PPO Delivery Form (Крок 2)
- * -------------------------------------------------------------------------------- */
-.ppo-form-group { margin-bottom: 15px; }
-.ppo-form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-.ppo-form-group input[type="text"], 
-.ppo-form-group input[type="tel"],
-.ppo-form-group input[type="email"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
 
-.ppo-autocomplete-list { 
-    border: 1px solid #ccc; 
-    max-height: 200px; 
-    overflow-y: auto; 
-    position: absolute; 
-    width: 100%; 
-    z-index: 1000; 
-    background: white;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.ppo-autocomplete-list li { 
-    padding: 10px; 
-    cursor: pointer; 
-}
-.ppo-autocomplete-list li:hover { 
+/* --------------------------------------------------------------------------------
+ * 4. СТИЛІ ДЛЯ ПЕРЕМИКАЧІВ-ТУМБЛЕРІВ (ПАПІР/РАМКА)
+ * -------------------------------------------------------------------------------- */
+
+/* Контейнер для групи перемикачів */
+.ppo-segmented-control {
+    display: flex; 
+    align-items: stretch; 
+    
+    border-radius: 999px; 
     background-color: #f0f0f0; 
+    padding: 3px; 
+    margin-top: 5px;
+    margin-bottom: 15px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); 
+    width: auto; 
+    box-sizing: border-box; 
+}
+
+/* Приховуємо стандартні радіо-кнопки */
+.ppo-segmented-control input[type="radio"] {
+    display: none;
+}
+
+/* Стилізація міток (сегментів) - повне центрування та фікс переносу */
+.ppo-segmented-control label {
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    text-align: center; 
+
+    flex: 1; 
+    padding: 8px 15px; 
+    cursor: pointer;
+    border-radius: 999px; 
+    font-size: 14px;
+    font-weight: 400;
+    color: #555; 
+    transition: all 0.2s ease-in-out; 
+    
+    white-space: nowrap; /* Фікс переносу */
+    flex-shrink: 1; 
+    flex-grow: 1; 
+
+    background-color: transparent; 
+    box-shadow: none;
+    border: none; 
+    margin: 0 !important; 
+    height: 100%; 
+}
+
+/* Стилізація активного (обраного) сегмента */
+.ppo-segmented-control input[type="radio"]:checked + label {
+    background-color: var(--ppo-white); 
+    color: var(--ppo-text-color); 
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+    border: 1px solid var(--ppo-primary-color); /* Додаємо кордон для виділення */
+}
+
+/* Стилізація при наведенні курсору на неактивний сегмент */
+.ppo-segmented-control label:hover:not(:has(+ input[type="radio"]:checked)) {
+    background-color: #e5e5e5; 
 }
 
 
+/* ==================================================================== */
+/* 5. СТИЛІ ДЛЯ ВЕРТИКАЛЬНОГО СПИСКУ ФОРМАТІВ З ЦІНОЮ (ФІНАЛЬНА ВЕРСІЯ З КРУГОМ ТА ПЛАШКОЮ "ГРН") */
+/* ==================================================================== */
 
-/* --------------------------------------------------------------------------------
- * Стилі для PPO Payment Form (Крок 3)
- * -------------------------------------------------------------------------------- */
-
-/* Заголовок для методу оплати */
-.ppo-order-form-container .ppo-payment-method-block h4 {
-    color: #333;
-    font-size: 1.1em;
-    margin-bottom: 10px;
-    font-weight: bold;
+.ppo-format-button-list {
+    display: block; 
+    padding: 0;
+    margin: 5px 0 0 0; 
 }
 
-/* Стиль для нотатки */
-.ppo-order-form-container .ppo-note {
-    font-size: 0.9em;
-    color: #6c757d;
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px dashed #ddd;
-    text-align: center;
+/* 1. Обгортка - Flex-контейнер для вирівнювання КНОПКА | ЦІНА */
+.ppo-format-item {
+    margin-bottom: 8px; 
+    display: flex; 
+    align-items: center; 
 }
 
-/* Стиль для LiqPay форми (щоб вона добре виглядала всередині step-block) */
-/* Це важливо, оскільки LiqPay генерує власну форму */
-.ppo-order-form-container .ppo-payment-method-block form {
-    text-align: center;
-    padding: 15px;
+.ppo-format-item input[type="radio"] {
+    display: none; 
+}
+
+/* 2. Стилізація самої КНОПКИ (Label) */
+.ppo-format-label {
+    display: flex; 
+    align-items: center; 
+    justify-content: flex-start; 
+    
+    flex-grow: 1; 
+    position: relative; 
+    z-index: 2; 
+    
+    margin-right: 15px; 
+    
+    /* Стиль КНОПКИ */
+    padding: 10px 15px; 
+    border-radius: 999px; 
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    
+    /* Неактивний вигляд */
+    background-color: var(--ppo-white); 
     border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #ffffff;
+    color: #555;
+    font-weight: 400;
 }
 
-/* Стиль для кнопки LiqPay (якщо вона не стилізується окремо) */
-/* Застосовуємо стилі ppo-button до всіх кнопок LiqPay, що можуть бути згенеровані */
-.ppo-payment-method-block form input[type="submit"] {
-    /* Наслідує ppo-button-primary стилі */
-    display: inline-block !important;
-    padding: 10px 20px !important; 
-    margin: 5px !important; 
-    text-decoration: none !important; 
-    border-radius: 4px !important; 
-    font-size: 16px !important; 
-    font-weight: bold !important;
-    cursor: pointer !important;
-    background: #0073aa !important; 
-    color: white !important; 
-    border: none !important;
-    transition: background 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-.ppo-payment-method-block form input[type="submit"]:hover {
-    background: #005177 !important;
+.ppo-format-label:hover {
+    background-color: #f7f7f7;
+    border-color: #ccc;
 }
 
-/* --------------------------------------------------------------------------------
- * Стилі для PPO Payment Result (Результат оплати)
- * -------------------------------------------------------------------------------- */
-.ppo-payment-result-container .ppo-result-block {
-    background-color: #ffffff; /* Білий фон для виділення результату */
-    border: 2px solid #0073aa; /* Чітка рамка */
+.ppo-format-name {
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
 }
 
-/* Великі заголовки для результату */
-.ppo-payment-result-container h2 {
-    font-size: 1.8em;
-    color: #0073aa;
-    margin-bottom: 20px;
+/* 3. Кружечок з ціною - фіксований стовпчик */
+.ppo-price-circle {
+    /* Зміни: тепер елементи всередині кружечка вирівнюються, 
+       а сам кружечок стає контейнером для абсолютно позиціонованої плашки "грн" */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* ВСТАНОВЛЮЄМО ФІКСОВАНУ ВИСОТУ І ШИРИНУ ДЛЯ КРУГЛОЇ ФОРМИ */
+    width: 38px; 
+    height: 38px; 
+    min-width: 38px; 
+    
+    flex-shrink: 0; 
+    position: relative; /* ВАЖЛИВО: для позиціонування дочірнього елемента "грн" */
+    z-index: 2; 
+    
+    margin-left: -5px; 
+    
+    border-radius: 50%; 
+    background-color: var(--ppo-white); 
+    border: 2px solid #e0e0e0; /* Неактивний кордон */
+    color: var(--ppo-text-color);
+    font-size: 13px;
+    font-weight: 500;
+    
+    transition: all 0.2s ease-in-out;
+}
+
+/* НОВЕ: Стилі для значення ціни всередині кружечка (щоб уникнути перекриття плашкою) */
+.ppo-price-circle .ppo-price-value {
+    font-size: 1em; 
+    line-height: 1;
+    /* Якщо ціна дуже велика, можна додати тут padding, але зазвичай достатньо */
+}
+
+/* ------------------------------------------------ */
+/* НОВЕ: СТИЛІ ПЛАШКИ "грн" */
+/* ------------------------------------------------ */
+.ppo-currency-badge {
+    position: absolute;
+    bottom: -5px; /* Перекриває кружечок знизу */
+    right: -5px;  /* Перекриває кружечок справа */
+    
+    background-color: var(--ppo-red-badge); /* Червона заливка */
+    color: var(--ppo-white);              /* Білий текст */
+    
+    padding: 2px 5px;
+    border-radius: 4px; /* Трохи заокруглені кути плашки */
+    font-size: 10px;    /* Маленький шрифт */
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    z-index: 3; /* Поверх кружечка */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Тінь для об'єму */
+    border: 1px solid rgba(0,0,0,0.1); /* Легкий кордон */
+}
+
+
+/* ------------------------------------------------ */
+/* СТИЛІ АКТИВНОГО (ВИБРАНОГО) ФОРМАТУ */
+/* ------------------------------------------------ */
+
+/* 1. Вибрана кнопка формату (Label) */
+.ppo-format-item input[type="radio"]:checked + .ppo-format-label {
+    /* Синя заливка в середині кнопки */
+    background-color: var(--ppo-primary-color); 
+    border-color: var(--ppo-primary-color);
+    /* Білий текст */
+    color: var(--ppo-white); 
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Стилізація імені формату всередині синьої кнопки */
+.ppo-format-item input[type="radio"]:checked + .ppo-format-label .ppo-format-name {
+     /* Білий текст для назви */
+    color: var(--ppo-white); 
+}
+
+/* ЛІНІЯ: Створюємо синю лінію між кнопкою та кружечком */
+.ppo-format-item input[type="radio"]:checked + .ppo-format-label::after {
+    content: '';
+    position: absolute;
+    top: 50%; 
+    left: 100%; 
+    height: 2px;
+    width: 27px; 
+    background: var(--ppo-primary-color); 
+    transform: translateY(-50%);
+    z-index: 1; 
+}
+
+/* 2. Вибраний кружечок з ціною (ppo-price-circle) */
+.ppo-format-item input[type="radio"]:checked + .ppo-format-label + .ppo-price-circle {
+    /* Синій кордон кнопки */
+    border: 2px solid var(--ppo-primary-color); 
+    /* Біла заливка (залишається білою) */
+    background-color: var(--ppo-white); 
+    /* Синій текст */
+    color: var(--ppo-primary-color); 
+    font-weight: 600;
 }
