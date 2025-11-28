@@ -30,8 +30,11 @@ function ppo_ajax_file_upload() {
     $format = sanitize_text_field($_POST['format']);
     
     // Отримання додаткових опцій
-    $finish_option = sanitize_text_field($_POST['ppo_finish_option'] ?? 'gloss');
-    $frame_option = sanitize_text_field($_POST['ppo_frame_option'] ?? 'frameoff');
+    // *** ВИПРАВЛЕНО РЯДКИ 27-28 ***
+    // Використовуємо 'paper' та 'frame', які відправляє JS
+    $finish_option = sanitize_text_field($_POST['paper'] ?? 'gloss');
+    $frame_option = sanitize_text_field($_POST['frame'] ?? 'frameoff');
+    // ******************************
     
     $copies_json = isset($_POST['copies']) ? stripslashes($_POST['copies']) : '[]';
     $copies_array = json_decode($copies_json, true);
@@ -47,7 +50,7 @@ function ppo_ajax_file_upload() {
     }
 
     // Формуємо унікальний ключ формату для сесії та CDN
-    $full_format_key = "{$format}_{$finish_option}_{$frame_option}";
+    $full_format_key = "{$format}_{$finish_option}_{$frame_option}"; 
     $price_for_format = PHOTO_PRICES[$format]; 
     
     // Ініціалізація сесії
@@ -204,7 +207,7 @@ function ppo_ajax_file_upload() {
         wp_send_json_success([
             'message' => 'Успішно додано ' . count($files_to_add) . ' фото (' . $total_copies_current_upload . ' копій) до формату ' . $full_format_key . '.',
             'formats' => $_SESSION['ppo_formats'] ?? [],
-            'total' => $_SESSION['ppo_total'], // Рядок 174 виправлено
+            'total' => $_SESSION['ppo_total'], 
         ]);
 
     } catch (\Exception $e) {
