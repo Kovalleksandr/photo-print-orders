@@ -916,3 +916,50 @@ body.ppo-modal-open {
  * це гарантує, що обидві кнопки будуть однакової висоти (40px) 
  * та розділять простір порівну (flex-grow: 1).
  */
+
+ /* ==================================================================== */
+/* 8. СТИЛІ ДЛЯ БЛОКУ "ДЕТАЛІ ЗАМОВЛЕННЯ" (SUMMARY) */
+/* ==================================================================== */
+
+/* 1. Прибираємо маркер списку (точку) та стандартні відступи */
+.ppo-order-form-container ul#ppo-formats-list {
+    list-style: none; /* Прибрати стандартні маркери (крапки) */
+    padding-left: 0;  /* Прибрати стандартний відступ зліва для списку */
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+/* 2. Додаємо тонку лінію-роздільник між елементами списку */
+.ppo-order-form-container ul#ppo-formats-list li {
+    padding: 8px 0; /* Внутрішній відступ зверху та знизу для розділення тексту */
+    border-bottom: 1px solid #eeeeee; /* Дуже тонка і світла лінія */
+    color: var(--ppo-text-color); /* Колір тексту */
+    font-size: 14px;
+    font-weight: 400; /* Не жирний */
+}
+
+/* Прибираємо лінію після останнього елемента, щоб не було зайвого роздільника */
+.ppo-order-form-container ul#ppo-formats-list li:last-child {
+    border-bottom: none;
+}
+
+/* 3. Стилізація загальної суми для кращого контрасту */
+.ppo-order-form-container .ppo-total-sum {
+    font-size: 1.1em;
+    padding-top: 10px;
+    border-top: 2px solid var(--ppo-orange); /* Виділяємо загальну суму більш помітною лінією */
+    margin-top: 15px;
+}
+
+/* Виділяємо саму суму жирним */
+.ppo-order-form-container #ppo-session-total {
+    font-weight: 700;
+    color: var(--ppo-primary-color);
+}
+
+/* Невеликий шрифт для загальної кількості копій */
+.ppo-order-form-container .ppo-total-sum small {
+    font-size: 0.8em;
+    font-weight: 400;
+    color: #6c757d;
+}
