@@ -12,6 +12,7 @@
     --ppo-red-badge: #dc3545; /* НОВЕ: Червоний колір для плашки "грн" */
     --ppo-orange: #f1b882; /* НОВЕ: Червоний колір для плашки "грн" */
     --ppo-text-color-h2: #464545;
+    --ppo_secondary-color-hover: #6B675B;
 }
 
 /* Припускаємо, що Montserrat підключено у вашій темі. */
@@ -43,12 +44,12 @@ body, .ppo-order-form-container {
     transition: background 0.2s; 
 }
 .ppo-button-primary { 
-    background: var(--ppo-primary-color); 
+    background: var(--ppo-orange); 
     color: var(--ppo-white); 
     border: none;
 }
 .ppo-button-primary:hover {
-    background: var(--ppo-secondary-color);
+    background: var(--ppo_secondary-color-hover);
 }
 .ppo-button-secondary { 
     background: #f7f7f7; 
@@ -58,6 +59,25 @@ body, .ppo-order-form-container {
 .ppo-button-secondary:hover {
     background: #e0e0e0;
 }
+
+
+#ppo-submit-container {
+    /* Використовуємо Flexbox для керування розташуванням дочірніх елементів */
+    display: flex; 
+    
+    /* Вирівнюємо елементи по правому краю контейнера */
+    justify-content: center; 
+    
+    /* Додаємо невеликий відступ, щоб кнопки не прилипали до попереднього елемента */
+    padding-top: 15px; 
+    
+    /* Розділяємо кнопки невеликим відступом */
+    gap: 10px; 
+}
+
+
+
+
 
 /* --------------------------------------------------------------------------------
  * Стилі для PPO Order Form (Загальні)
@@ -108,12 +128,12 @@ body, .ppo-order-form-container {
 /* Стилі для списку фото */
 .ppo-order-form-container #photo-quantities {
     margin-top: 10px;
-    border: 1px solid #ccc;
+    /*border: 1px solid #ccc;*/
     padding: 10px;
     border-radius: 4px;
     max-height: 400px;
     overflow-y: auto;
-    background: #f9f9f9;
+    /* background: #f9f9f9;*/
 }
 .ppo-order-form-container .photo-item {
     border-bottom: 1px solid #eee;
@@ -225,7 +245,7 @@ body, .ppo-order-form-container {
     border-radius: 25px;
 }
 .ppo-order-form-container #ppo-summary {
-    background-color: #f0fff0; 
+    /*background-color: #f0fff0; */
 }
 
 /* Прибираємо стилі з елементів, які тепер стилізуються через .ppo-step-block */
@@ -798,3 +818,50 @@ body.ppo-modal-open {
 
 /* Приховати контейнер прогресу (JS буде застосовувати display: none)
 #ppo-progress-container[style*="display: none"] { ... } */
+
+/* ... існуючі стилі ... */
+
+/* Стилі для посилань-закликів та інформаційних блоків */
+.ppo-add-photos-link {
+    /* Цей клас тепер може бути використаний лише для центрування, якщо він є у старому JS */
+    text-align: center;
+    display: block; 
+    margin: 15px 0; 
+}
+
+/* Новий стиль для інформаційного тексту під плюсиком */
+.ppo-add-photos-link-info {
+    text-align: center;
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 50px; /* Підтягуємо ближче до кружечка */
+}
+
+/* Стилі для плюсика в кружечку */
+.ppo-add-photos-circle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px; 
+    height: 60px; 
+    border: 2px dashed var(--ppo-orange);
+    border-radius: 50%;
+    font-size: 30px;
+    color: var(--ppo-orange);
+    cursor: pointer;
+    margin: 20px auto 15px auto; /* Центрування та відступ знизу */
+    transition: all 0.2s ease-in-out;
+}
+
+.ppo-add-photos-circle:hover {
+    background-color: #e6f7ff;
+    transform: scale(1.05);
+}
+
+/* Стан, коли досягнуто максимуму файлів */
+.ppo-add-photos-circle.disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: default;
+    background-color: #f9f9f9;
+}

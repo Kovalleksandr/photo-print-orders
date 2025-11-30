@@ -54,11 +54,13 @@ function ppo_render_order_form() {
                 </div>
             </div>
         </div>
-        
-        
+    
+          
+        <?php /*
         <p>Мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
         <p>Завантажуйте по <?php echo MAX_FILES_PER_UPLOAD; ?> фото.</p>
-        
+        */ ?>
+
         <form id="photo-print-order-form" enctype="multipart/form-data">
             <input 
                 type="file" 
@@ -133,9 +135,10 @@ function ppo_render_order_form() {
                 <h3>ЗАВАНТАЖЕННЯ ФОТО</h3>
 
                 <div id="photo-quantities" class="ppo-photo-quantities ppo-quantities-container">
-                    <p id="ppo-add-photos-link" class="ppo-add-photos-link">
-                            Натисніть тут, щоб додати фото (максимум <?php echo MAX_FILES_PER_UPLOAD; ?>)
-                    </p>
+                    <div id="ppo-add-photos-link" class="ppo-add-photos-circle">
+                        &#43;
+                    </div>
+
                 </div>
                 
                 <p id="sum-warning" class="ppo-message ppo-message-warning ppo-sum-warning">
@@ -150,8 +153,7 @@ function ppo_render_order_form() {
                 </p>
 
                 <div class="ppo-buttons-in-quantities">
-                    <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>Зберегти замовлення</button>
-                    <div id="ppo-loader" class="ppo-loader"></div>
+
                     
                     <div id="ppo-progress-container" class="ppo-progress-container" style="display: none; margin: 10px 0;">
                         <div id="ppo-progress-bar" class="ppo-progress-bar">
@@ -159,8 +161,11 @@ function ppo_render_order_form() {
                         </div>
                         <span id="ppo-progress-text" class="ppo-progress-text">0%</span>
                     </div>
-                    
-                    <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">Очистити</button>
+
+                </div>
+                <div id="ppo-submit-container">
+                    <button type="button" id="clear-form" class="ppo-button ppo-button-secondary">ОЧИСТИТИ</button>
+                    <button type="submit" name="ppo_submit_order" class="ppo-button ppo-button-primary" id="submit-order" disabled>ЗБЕРЕГТИ</button>
                 </div>
             </div>
         </form>
@@ -196,7 +201,7 @@ function ppo_render_order_form() {
                                     $display_key .= ' (' . trim("{$finish_label}, {$frame_label}", ', ') . ')';
                                 }
                         ?>
-                                <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' копій, ' . number_format($details['total_price'], 2, '.', '') . ' грн'); ?></li>
+                                <li><?php echo esc_html($display_key . ': ' . $details['total_copies'] . ' шт., ' . number_format($details['total_price'], 2, '.', '') . ' грн.'); ?></li>
                         <?php 
                             endif; 
                         endforeach; 
@@ -204,13 +209,13 @@ function ppo_render_order_form() {
                     <?php endif; ?>
                 </ul>
                 <p class="ppo-total-sum">
-                    Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього копій: <?php echo esc_html($total_copies_overall); ?>)</small></span>
+                    Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього шт.: <?php echo esc_html($total_copies_overall); ?>)</small></span>
                 </p>
                 <div class="ppo-buttons-container">
-                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ВИДАЛИТИ ЗАМОВЛЕННЯ</a>
+                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ОЧИСТИТИ</a>
                     <form method="post" style="display: inline;">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
-                        <input type="submit" name="ppo_go_to_delivery" value="ОФОРМИТИ ДОСТАВКУ" class="ppo-button ppo-button-primary">
+                        <input type="submit" name="ppo_go_to_delivery" value="ЗАМОВИТИ" class="ppo-button ppo-button-primary">
                     </form>
                 </div>
             </div>
