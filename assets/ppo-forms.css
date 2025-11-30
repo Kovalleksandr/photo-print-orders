@@ -12,7 +12,7 @@
     --ppo-red-badge: #dc3545; /* НОВЕ: Червоний колір для плашки "грн" */
     --ppo-orange: #f1b882; /* НОВЕ: Червоний колір для плашки "грн" */
     --ppo-text-color-h2: #464545;
-    --ppo_secondary-color-hover: #6B675B;
+    --ppo_secondary-color-hover: #56b463;
 }
 
 /* Припускаємо, що Montserrat підключено у вашій темі. */
@@ -73,10 +73,10 @@ body, .ppo-order-form-container {
     
     /* Розділяємо кнопки невеликим відступом */
     gap: 10px; 
+    
+    /* Додано: Забезпечуємо розтягування елементів на повну висоту */
+    align-items: stretch;
 }
-
-
-
 
 
 /* --------------------------------------------------------------------------------
@@ -280,6 +280,14 @@ body, .ppo-order-form-container {
     font-weight: 500;
 }
 
+/* ==================================================================== */
+/* 2.5. ВИПРАВЛЕННЯ: КЕРУВАННЯ ВИДИМІСТЮ КРОКУ 2 (ЗАВАНТАЖЕННЯ) */
+/* ==================================================================== */
+/* Додано display: none; для надійності. JS буде його показувати. */
+.ppo-order-form-container #ppo-step-2 {
+    display: none; 
+}
+
 
 /* ==================================================================== */
 /* 3. АДАПТАЦІЯ ДЛЯ БЛОКУ ОПЦІЙ (КРОК 1) */
@@ -365,7 +373,7 @@ body, .ppo-order-form-container {
     animation: pulse 1.5s infinite; 
 }
 @keyframes pulse {
-    0% { opacity: 1; }
+    0% { transform: rotate(0deg); }
     50% { opacity: 0.5; }
     100% { opacity: 1; }
 }
@@ -509,7 +517,7 @@ body.ppo-modal-open {
 
 /* Стилізація при наведенні курсору на неактивний сегмент */
 .ppo-segmented-control label:hover:not(:has(+ input[type="radio"]:checked)) {
-    background-color: #e5e5e5; 
+    background-color: #ffffff; 
 }
 
 
@@ -559,9 +567,11 @@ body.ppo-modal-open {
     font-weight: 400;
 }
 
-.ppo-format-label:hover {
+/* *** ВИПРАВЛЕННЯ: Підвищена специфічність для коректного HOVER неактивної кнопки *** */
+.ppo-format-item input[type="radio"]:not(:checked) + .ppo-format-label:hover {
     background-color: #f7f7f7;
     border-color: #ccc;
+    color: #333; 
 }
 
 .ppo-format-name {
@@ -646,9 +656,16 @@ body.ppo-modal-open {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
+/* HOVER для АКТИВНОЇ кнопки (залишається без змін) */
+.ppo-format-item input[type="radio"]:checked + .ppo-format-label:hover {
+    /* Робимо фон трохи світлішим, щоб візуально підтвердити ховер */
+    background-color: #f5a86d; 
+    color: var(--ppo-white);
+}
+
 /* Стилізація імені формату всередині синьої кнопки */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label .ppo-format-name {
-     /* Білий текст для назви */
+      /* Білий текст для назви */
     color: var(--ppo-white); 
 }
 
@@ -869,3 +886,33 @@ body.ppo-modal-open {
     cursor: default;
     background-color: #f9f9f9;
 }
+
+
+/* ==================================================================== */
+/* 7. ВИПРАВЛЕННЯ: ВИРІВНЮВАННЯ ТА РОЗМІР КНОПОК ОЧИСТИТИ/ЗАМОВИТИ */
+/* ==================================================================== */
+
+
+
+#ppo-submit-container .ppo-button {
+    /* Робимо кнопку гнучким контейнером, щоб центрувати текст по вертикалі */
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    
+    /* Встановлюємо ФІКСОВАНУ висоту для обох кнопок */
+    height: 40px; 
+    
+    /* Дозволяємо кнопкам рівномірно розтягуватися по ширині */
+    flex-grow: 1; 
+    
+    /* Забезпечуємо, що padding та border не збільшують загальний розмір */
+    box-sizing: border-box;
+}
+
+
+
+/* Оскільки #ppo-submit-container має align-items: stretch;, 
+ * це гарантує, що обидві кнопки будуть однакової висоти (40px) 
+ * та розділять простір порівну (flex-grow: 1).
+ */
