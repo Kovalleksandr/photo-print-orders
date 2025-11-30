@@ -666,3 +666,135 @@ body.ppo-modal-open {
     margin-bottom: 10px;
     
 }
+
+/* Custom PPO Form Styles (Доповнення до основного CSS-файлу) */
+
+/* =========== 1. СТИЛІ ДЛЯ ЗАВАНТАЖЕННЯ ФОТО (photo-item) =========== */
+
+/* Контейнер для окремого фото та елементів керування */
+.ppo-photo-quantities .photo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+/* Контейнер мініатюри */
+.photo-item .photo-thumbnail-container {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
+    overflow: hidden;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    font-size: 20px; /* Для символу 📄 */
+}
+
+.photo-item .photo-thumbnail-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Назва файлу */
+.photo-item label {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    margin-right: 15px;
+}
+
+/* Поле вводу копій */
+.photo-item input[type="number"] {
+    width: 60px;
+    padding: 5px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 15px;
+}
+
+/* Кнопка видалення */
+.photo-item .remove-file-btn {
+    background: none; 
+    border: none; 
+    color: #dc3545; /* Червоний */
+    cursor: pointer;
+    font-size: 20px;
+    padding: 0;
+    line-height: 1;
+}
+
+/* =========== 2. СТИЛІ ДЛЯ DRAG-AND-DROP =========== */
+
+/* Візуальний ефект при перетягуванні файлів */
+#ppo-step-2.drag-over {
+    border: 2px dashed #007bff;
+    background-color: #e6f7ff;
+    border-radius: 8px;
+}
+
+/* Стилі для посилань-закликів */
+.ppo-add-photos-link {
+    text-align: center;
+    color: #0073aa; 
+    cursor: pointer; 
+    text-decoration: underline; 
+    font-weight: bold; 
+    padding: 10px 0;
+    display: block; /* Забезпечує, що посилання займає всю ширину */
+}
+
+/* Стан, коли досягнуто максимуму файлів */
+.ppo-add-photos-link[style*="color: rgb(204, 204, 204)"] {
+    color: #ccc !important;
+    cursor: default !important;
+    text-decoration: none !important;
+}
+
+/* Стиль для попередження про скидання опцій */
+#ppo-quantities .ppo-add-photos-link[style*="color: rgb(204, 0, 0)"] {
+    color: #cc0000 !important;
+    cursor: default !important;
+    text-decoration: none !important;
+}
+
+/* =========== 3. СТИЛІ ДЛЯ МОДАЛЬНОГО ВІКНА ТА ПРОГРЕСУ =========== */
+
+/* Клас для body при відкритому модальному вікні */
+body.ppo-modal-open {
+    overflow: hidden;
+}
+
+.ppo-modal {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.ppo-modal.show {
+    opacity: 1;
+}
+
+.ppo-progress-fill.processing {
+    background-color: #ffc107; /* Жовтий - обробка */
+}
+
+.ppo-progress-text.processing-text {
+    color: #ffc107;
+}
+
+/* =========== 4. Стилі для прихованих елементів (чистка) =========== */
+
+/* Ці стилі були inline, але їх краще контролювати через класи або основний CSS */
+
+/* Приховати крок 1, якщо є файли (JS буде застосовувати style.display = 'none';)
+#ppo-step-1[style*="display: none"] { ... } */
+
+/* Приховати контейнер прогресу (JS буде застосовувати display: none)
+#ppo-progress-container[style*="display: none"] { ... } */

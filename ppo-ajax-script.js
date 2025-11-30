@@ -9,16 +9,16 @@ jQuery(document).ready(function($) {
     }
     
     function toggleFormatOptionsVisibility() {
-        const optionsContainer = document.getElementById('ppo-step-1'); 
-        if (!optionsContainer) { return; }
+        const $optionsContainer = $('#ppo-step-1'); 
+        if (!$optionsContainer.length) { return; }
 
         const hasFiles = accumulatedFiles.files.length > 0;
         
         // Крок 1 (вибір формату) має бути видимим, якщо немає файлів.
         if (hasFiles) {
-            optionsContainer.style.display = 'none';
+            $optionsContainer.hide();
         } else {
-            optionsContainer.style.display = '';
+            $optionsContainer.show();
         }
     }
 
@@ -180,7 +180,7 @@ jQuery(document).ready(function($) {
                 let displayKey = formatName;
                 
                 if (paperLabel || frameLabel) {
-                     displayKey += ' (' + [paperLabel, frameLabel].filter(Boolean).join(', ') + ')';
+                    displayKey += ' (' + [paperLabel, frameLabel].filter(Boolean).join(', ') + ')';
                 }
                 
                 const listItem = $('<li>').html(`
@@ -284,7 +284,6 @@ jQuery(document).ready(function($) {
         if (!getSelectedFormatValue() && accumulatedFiles.files.length === 0) { 
              // Якщо немає формату і немає файлів, то дозволяємо завантажувати,
              // але просимо обрати формат. Це буде оброблено в обробнику кліку/drop.
-             
         }
 
         if (newFiles && newFiles.length > 0) {
@@ -305,10 +304,6 @@ jQuery(document).ready(function($) {
             const $link = $('<p>')
                 .attr('id', 'ppo-add-photos-link')
                 .addClass('ppo-add-photos-link')
-                .css({
-                    'text-align': 'center', 'color': '#0073aa', 'cursor': 'pointer', 
-                    'text-decoration': 'underline', 'font-weight': 'bold', 'padding': '10px 0'
-                })
                 .text('Натисніть тут, щоб додати фото (або перетягніть файли сюди)');
             
             $quantitiesContainer.append($link);
@@ -323,15 +318,16 @@ jQuery(document).ready(function($) {
         const $addMoreLink = $('<p>')
             .attr('id', 'ppo-add-photos-link')
             .addClass('ppo-add-photos-link')
-            .html(currentFiles.length >= maxFiles ? `Максимум файлів досягнуто (${currentFiles.length})` : addLinkText)
-            .css({
-                'text-align': 'center',
-                'color': currentFiles.length >= maxFiles ? '#ccc' : '#0073aa',
-                'cursor': currentFiles.length >= maxFiles ? 'default' : 'pointer',
-                'text-decoration': currentFiles.length >= maxFiles ? 'none' : 'underline',
-                'font-weight': 'bold',
-                'padding': '10px 0'
-            }); 
+            .html(currentFiles.length >= maxFiles ? `Максимум файлів досягнуто (${currentFiles.length})` : addLinkText);
+
+        if (currentFiles.length >= maxFiles) {
+             // Додаємо стилі для неактивного стану, замінюючи inline CSS
+             $addMoreLink.css({
+                 'color': '#ccc', 
+                 'cursor': 'default', 
+                 'text-decoration': 'none'
+             });
+        }
             
         $.each(currentFiles, function(i, file) {
             const $item = $('<div class="photo-item">');
@@ -362,7 +358,7 @@ jQuery(document).ready(function($) {
                 })
                 .on('input change', updateCurrentUploadSummary);
             
-            const $removeButton = $('<button type="button" class="remove-file-btn" style="background:none; border:none; color:red; cursor:pointer;">&times;</button>')
+            const $removeButton = $('<button type="button" class="remove-file-btn">&times;</button>')
                 .data('file-index', i)
                 .on('click', function() {
                     removeFileFromList(i); 
@@ -428,7 +424,8 @@ jQuery(document).ready(function($) {
         const $warningLink = $('<p>')
              .attr('id', 'ppo-add-photos-link')
              .addClass('ppo-add-photos-link')
-             .css({'text-align': 'center', 'color': '#cc0000', 'font-weight': 'bold', 'padding': '10px 0'})
+             // Використовуємо inline-стиль лише для цього конкретного випадку, щоб привернути увагу
+             .css({'color': '#cc0000', 'font-weight': 'bold', 'padding': '10px 0', 'cursor': 'default', 'text-decoration': 'none'}) 
              .text('УВАГА! Опції змінено. Оберіть формат та додайте фото заново.');
         
         $quantitiesContainer.html($warningLink).show(); 
@@ -638,7 +635,7 @@ jQuery(document).ready(function($) {
 
                         if (percentComplete >= 100 && !uploadComplete) {
                             uploadComplete = true;
-                            $progressFill.width('100%').addClass('processing'); 
+                            $progressFill.addClass('processing'); 
                             $progressText.text('Завантажено! Обробка на сервері...').addClass('processing-text');
                         }
                     }
