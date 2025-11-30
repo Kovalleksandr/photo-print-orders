@@ -238,6 +238,8 @@ body, .ppo-order-form-container {
 /* Візуальне розділення контейнерів */
 .ppo-order-form-container #ppo-step-1 {
     background-color: #ffffff; 
+    border: 2px solid var(--ppo-orange);
+    border-radius: 25px;
 }
 .ppo-order-form-container #ppo-step-2 {
     /*background-color: #f0f8ff; */
@@ -245,7 +247,9 @@ body, .ppo-order-form-container {
     border-radius: 25px;
 }
 .ppo-order-form-container #ppo-summary {
-    /*background-color: #f0fff0; */
+    background-color: #ffffff; 
+    border: 2px solid var(--ppo-orange);
+    border-radius: 25px;
 }
 
 /* Прибираємо стилі з елементів, які тепер стилізуються через .ppo-step-block */

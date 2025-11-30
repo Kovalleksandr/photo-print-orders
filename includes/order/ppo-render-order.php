@@ -211,7 +211,7 @@ function ppo_render_order_form() {
                 <p class="ppo-total-sum">
                     Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього шт.: <?php echo esc_html($total_copies_overall); ?>)</small></span>
                 </p>
-                <div class="ppo-buttons-container">
+                <div class="ppo-buttons-container" id="ppo-submit-container">
                     <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ОЧИСТИТИ</a>
                     <form method="post" style="display: inline;">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
