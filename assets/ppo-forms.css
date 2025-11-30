@@ -4,12 +4,14 @@
 
 /* Визначаємо колірну палітру для легкої зміни */
 :root {
-    --ppo-primary-color: #0073aa; /* Основний синій (колір кнопок) */
+    --ppo-primary-color: #3a3a3a; /* Основний сірий для заголовків */
     --ppo-secondary-color: #005177; /* Темніший синій для ховеру */
     --ppo-text-color: #333;
     --ppo-white: #ffffff;
     --ppo-light-gray: #e0e0e0;
     --ppo-red-badge: #dc3545; /* НОВЕ: Червоний колір для плашки "грн" */
+    --ppo-orange: #f1b882; /* НОВЕ: Червоний колір для плашки "грн" */
+    --ppo-text-color-h2: #464545;
 }
 
 /* Припускаємо, що Montserrat підключено у вашій темі. */
@@ -209,16 +211,18 @@ body, .ppo-order-form-container {
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); 
+    /*border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); */
 }
 
 /* Візуальне розділення контейнерів */
 .ppo-order-form-container #ppo-step-1 {
-    background-color: #fcf5e6; 
+    background-color: #ffffff; 
 }
 .ppo-order-form-container #ppo-step-2 {
-    background-color: #f0f8ff; 
+    /*background-color: #f0f8ff; */
+    border: 2px solid var(--ppo-orange);
+    border-radius: 25px;
 }
 .ppo-order-form-container #ppo-summary {
     background-color: #f0fff0; 
@@ -472,10 +476,11 @@ body.ppo-modal-open {
 /* Стилізація активного (обраного) сегмента */
 .ppo-segmented-control input[type="radio"]:checked + label {
     background-color: var(--ppo-white); 
-    color: var(--ppo-text-color); 
+    color: var(--ppo-orange); 
     font-weight: 500;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-    border: 1px solid var(--ppo-primary-color); /* Додаємо кордон для виділення */
+    /*box-shadow: 0 1px 3px rgba(0,0,0,0.1); */
+    border: 2px solid var(--ppo-orange); /* Додаємо кордон для виділення */
+    letter-spacing: 0.1em;
 }
 
 /* Стилізація при наведенні курсору на неактивний сегмент */
@@ -518,7 +523,7 @@ body.ppo-modal-open {
     margin-right: 15px; 
     
     /* Стиль КНОПКИ */
-    padding: 10px 15px; 
+    padding: 5px 15px; 
     border-radius: 999px; 
     cursor: pointer;
     transition: all 0.2s ease-in-out;
@@ -551,9 +556,9 @@ body.ppo-modal-open {
     justify-content: center;
     
     /* ВСТАНОВЛЮЄМО ФІКСОВАНУ ВИСОТУ І ШИРИНУ ДЛЯ КРУГЛОЇ ФОРМИ */
-    width: 38px; 
-    height: 38px; 
-    min-width: 38px; 
+    width: 45px; 
+    height: 45px; 
+    min-width: 45px; 
     
     flex-shrink: 0; 
     position: relative; /* ВАЖЛИВО: для позиціонування дочірнього елемента "грн" */
@@ -576,6 +581,7 @@ body.ppo-modal-open {
     font-size: 1em; 
     line-height: 1;
     /* Якщо ціна дуже велика, можна додати тут padding, але зазвичай достатньо */
+    font-size: 16px;
 }
 
 /* ------------------------------------------------ */
@@ -608,8 +614,8 @@ body.ppo-modal-open {
 /* 1. Вибрана кнопка формату (Label) */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label {
     /* Синя заливка в середині кнопки */
-    background-color: var(--ppo-primary-color); 
-    border-color: var(--ppo-primary-color);
+    background-color: var(--ppo-orange); 
+    /*border-color: var(--ppo-primary-color);*/
     /* Білий текст */
     color: var(--ppo-white); 
     font-weight: 500;
@@ -630,7 +636,7 @@ body.ppo-modal-open {
     left: 100%; 
     height: 2px;
     width: 27px; 
-    background: var(--ppo-primary-color); 
+    background: var(--ppo-orange); 
     transform: translateY(-50%);
     z-index: 1; 
 }
@@ -638,10 +644,25 @@ body.ppo-modal-open {
 /* 2. Вибраний кружечок з ціною (ppo-price-circle) */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label + .ppo-price-circle {
     /* Синій кордон кнопки */
-    border: 2px solid var(--ppo-primary-color); 
+    border: 2px solid var(--ppo-orange); 
     /* Біла заливка (залишається білою) */
     background-color: var(--ppo-white); 
     /* Синій текст */
     color: var(--ppo-primary-color); 
     font-weight: 600;
+    width: 55px;
+    height: 55px;
+
+}
+
+
+
+#label-h2 {
+    /* Стилі тільки для напису "РОЗМІР ФОТО:" */
+    font-size: 1.2rem;
+    color: var(--ppo-text-color-h2);
+    
+    display: block; /* Щоб займав окремий рядок */
+    margin-bottom: 10px;
+    
 }

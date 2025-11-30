@@ -74,28 +74,30 @@ function ppo_render_order_form() {
                 <h3>ОПЦІЇ ЗАМОВЛЕННЯ</h3>
 
                 <div class="ppo-option-group">
-                    <label>ТИП ПАПЕРУ:</label>
+                    <label id="label-h2">ТИП ПАПЕРУ:</label>
                     <div class="ppo-segmented-control">
                         <input type="radio" name="paper" id="paper-g" value="glossy" checked>
-                        <label for="paper-g">Глянцевий</label> 
+                        <label for="paper-g">ГЛЯНЦЕВИЙ</label> 
 
                         <input type="radio" name="paper" id="paper-m" value="matte">
-                        <label for="paper-m">Матовий</label>
+                        <label for="paper-m">МАТОВИЙ</label>
                     </div>
                 </div>
 
                 <div class="ppo-option-group">
-                    <label>РАМКА:</label>
+                    <label id="label-h2">РАМКА:</label>
                     <div class="ppo-segmented-control">
                         <input type="radio" name="frame" id="frame-none" value="none" checked>
-                        <label for="frame-none">Без рамки</label>
+                        <label for="frame-none">БЕЗ РАМКИ</label>
 
                         <input type="radio" name="frame" id="frame-yes" value="yes">
-                        <label for="frame-yes">З рамкою</label>
+                        <label for="frame-yes">З РАМКОЮ
+
+                        </label>
                     </div>
                 </div>
                 <div class="ppo-option-group ppo-format-select-group" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-                    <label>Оберіть формат фото:</label>
+                    <label id="label-h2">РОЗМІР ФОТО:</label>
                     <div class="ppo-format-button-list">
                         <?php 
                             $first_format = true;
