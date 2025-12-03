@@ -1,7 +1,9 @@
 <?php
 // includes/payment/ppo-render-payment.php
 
-// !!! ВИДАЛЕНО: use LiqPay\LiqPay; - щоб уникнути проблем із просторами імен !!!
+if (!defined('ABSPATH')) {
+    exit;
+}
 
 /**
  * Генерує унікальний Order ID для LiqPay.
@@ -23,17 +25,21 @@ function ppo_generate_liqpay_order_id(string $ppo_order_id): string {
  * @return string HTML-форма LiqPay або повідомлення про помилку.
  */
 function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
+    // Перевірка констант
+    if (!defined('LIQPAY_PUBLIC_KEY') || !defined('LIQPAY_PRIVATE_KEY')) {
+         return '<p class="ppo-message ppo-message-error">Помилка: Ключі LiqPay не визначено у ppo-config.php.</p>';
+    }
+
     $public_key = LIQPAY_PUBLIC_KEY; 
     $private_key = LIQPAY_PRIVATE_KEY;
 
-    // ВИПРАВЛЕНО: Перевірка наявності класу 'LiqPay' без простору імен
+    // Перевірка наявності класу 'LiqPay' без простору імен
     if (!class_exists('LiqPay')) {
         return '<p class="ppo-message ppo-message-error">Помилка: Клас LiqPay SDK не знайдено. Перевірте встановлення Composer.</p>';
     }
     
     try {
-        // ВИПРАВЛЕНО: Ініціалізація класу 'LiqPay'
-        // Припускаємо, що клас LiqPay визначено у глобальному просторі імен, оскільки `use` видалено.
+        // Ініціалізація класу 'LiqPay'
         $liqpay = new LiqPay($public_key, $private_key);
         
         $description = sprintf('Оплата замовлення фотодруку №%s', $ppo_order_id);
@@ -60,6 +66,7 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
         return $liqpay->cnb_form($params);
 
     } catch (\Exception $e) {
+        error_log('LiqPay Error: ' . $e->getMessage()); 
         return '<p class="ppo-message ppo-message-error">Помилка ініціалізації LiqPay: ' . esc_html($e->getMessage()) . '</p>';
     }
 }
@@ -72,12 +79,12 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
 function ppo_render_payment_form() {
     // 1. Перевірка сесії
     if (empty($_SESSION['ppo_order_id']) || empty($_SESSION['ppo_total'])) {
-        // Додано контейнер для стилю
         return '<div class="ppo-order-form-container"><div class="ppo-step-block"><p class="ppo-message ppo-message-error">Помилка: Немає активного замовлення або суми до сплати.</p><a href="' . esc_url(home_url('/order/')) . '" class="ppo-button ppo-button-secondary">Повернутися до замовлення</a></div></div>';
     }
 
     $ppo_order_id = sanitize_text_field($_SESSION['ppo_order_id']);
     $total_amount = floatval($_SESSION['ppo_total']);
+    $delivery_url = home_url('/orderpagedelivery/'); // SLUG сторінки доставки
     
     ob_start();
     ?>
@@ -91,23 +98,26 @@ function ppo_render_payment_form() {
 
             <div class="ppo-payment-method-block">
                 <h4 class="ppo-method-title">Сплатити карткою через LiqPay</h4>
-                
-                <?php 
-                // 3. Генерація форми LiqPay
-                echo ppo_generate_liqpay_form($total_amount, $ppo_order_id);
-                ?>
-
-                <p class="ppo-note">Натискаючи кнопку "Сплатити", ви будете перенаправлені на захищену сторінку LiqPay.</p>
             </div>
+            
+            <div class="ppo-buttons-container ppo-delivery-actions">
+                
+                <a href="<?php echo esc_url($delivery_url); ?>" class="ppo-button ppo-button-secondary ppo-action-button">
+                    ← НАЗАД (До доставки)
+                </a>
+                
+                <div class="ppo-payment-liqpay-wrapper ppo-action-button">
+                    <?php 
+                    echo ppo_generate_liqpay_form($total_amount, $ppo_order_id);
+                    ?>
+                </div>
+                
+            </div>
+            
+            <p class="ppo-note">Натискаючи кнопку "Сплатити", ви будете перенаправлені на захищену сторінку LiqPay.</p>
+            
+        </div> 
         </div>
-        
-        <div class="ppo-buttons-container ppo-back-link">
-            <a href="<?php echo esc_url(home_url('/orderpagedelivery/')); ?>" class="ppo-button ppo-button-secondary">
-                ← НАЗАД 
-            </a>
-        </div>
-        
-    </div>
     <?php
     return ob_get_clean();
 }
@@ -171,7 +181,7 @@ function ppo_render_payment_result() {
                 <p class="ppo-message ppo-message-info">ℹ️ Статус платежу невідомий. Перевірте замовлення в особистому кабінеті.</p>
             <?php endif; ?>
             
-            <div class="ppo-buttons-container ppo-back-link">
+            <div class="ppo-buttons-container">
                 <a href="<?php echo esc_url(home_url('/orderpage/')); ?>" class="ppo-button ppo-button-secondary">Повернутися до головної сторінки замовлень</a>
             </div>
         </div>
@@ -179,12 +189,11 @@ function ppo_render_payment_result() {
     <?php
     
     // ОЧИЩЕННЯ СЕСІЇ ПІСЛЯ ЗАВЕРШЕННЯ ЗАМОВЛЕННЯ/ОПЛАТИ.
-    // Це вирішує проблему відображення залишків даних (суми '0') на сторінці нового замовлення.
     unset($_SESSION['ppo_order_id']);
     unset($_SESSION['ppo_total']);
-    unset($_SESSION['ppo_formats']); // Додано для повного очищення деталей замовлення
-    unset($_SESSION['ppo_contact_info']); // Додано для очищення контактних даних
-    unset($_SESSION['ppo_delivery_details_array']); // Додано для очищення деталей доставки
+    unset($_SESSION['ppo_formats']);
+    unset($_SESSION['ppo_contact_info']);
+    unset($_SESSION['ppo_delivery_details_array']);
 
     return ob_get_clean();
 }

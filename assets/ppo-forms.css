@@ -9,15 +9,14 @@
     --ppo-text-color: #333;
     --ppo-white: #ffffff;
     --ppo-light-gray: #e0e0e0;
-    --ppo-red-badge: #dc3545; /* НОВЕ: Червоний колір для плашки "грн" */
-    --ppo-orange: #f1b882; /* НОВЕ: Червоний колір для плашки "грн" */
+    --ppo-red-badge: #dc3545; /* Червоний колір для плашки "грн" */
+    --ppo-orange: #f1b882; /* Основний акцентний колір */
     --ppo-text-color-h2: #464545;
     --ppo_secondary-color-hover: #56b463;
 }
 
 /* Припускаємо, що Montserrat підключено у вашій темі. */
 body, .ppo-order-form-container {
-    /* Використовуємо тонкий шрифт */
     font-family: 'Montserrat', sans-serif;
     font-weight: 300; 
 }
@@ -35,7 +34,7 @@ body, .ppo-order-form-container {
 .ppo-button { 
     display: inline-block !important; 
     padding: 8px 16px; 
-    margin: 5px; 
+    /*margin: 5px; */
     text-decoration: none; 
     border-radius: 3px; 
     font-size: 14px; 
@@ -61,21 +60,21 @@ body, .ppo-order-form-container {
 }
 
 
+/* Контейнер кнопок (для сторінки замовлення) */
 #ppo-submit-container {
-    /* Використовуємо Flexbox для керування розташуванням дочірніх елементів */
     display: flex; 
-    
-    /* Вирівнюємо елементи по правому краю контейнера */
     justify-content: center; 
-    
-    /* Додаємо невеликий відступ, щоб кнопки не прилипали до попереднього елемента */
     padding-top: 15px; 
-    
-    /* Розділяємо кнопки невеликим відступом */
     gap: 10px; 
-    
-    /* Додано: Забезпечуємо розтягування елементів на повну висоту */
     align-items: stretch;
+}
+#ppo-submit-container .ppo-button {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 40px; 
+    flex-grow: 1; 
+    box-sizing: border-box;
 }
 
 
@@ -89,6 +88,7 @@ body, .ppo-order-form-container {
 .ppo-order-form-container .ppo-buttons-container {
     margin-top: 15px;
 }
+/* Повідомлення */
 .ppo-order-form-container .ppo-message {
     padding: 10px;
     margin: 10px 0;
@@ -110,6 +110,7 @@ body, .ppo-order-form-container {
     background: #fff3cd;
     border-color: orange;
 }
+/* Завантажувач */
 .ppo-order-form-container .ppo-loader {
     display: none;
     margin-left: 10px;
@@ -128,12 +129,10 @@ body, .ppo-order-form-container {
 /* Стилі для списку фото */
 .ppo-order-form-container #photo-quantities {
     margin-top: 10px;
-    /*border: 1px solid #ccc;*/
     padding: 10px;
     border-radius: 4px;
     max-height: 400px;
     overflow-y: auto;
-    /* background: #f9f9f9;*/
 }
 .ppo-order-form-container .photo-item {
     border-bottom: 1px solid #eee;
@@ -183,40 +182,6 @@ body, .ppo-order-form-container {
     height: 100%;
     object-fit: cover;
 }
-
-
-/* Додаткові класи для рендера (від inline) */
-.ppo-order-form-container .ppo-clear-session-link {
-    margin-bottom: 15px;
-}
-.ppo-order-form-container .ppo-add-photos-link {
-    text-align: center;
-    color: var(--ppo-primary-color);
-    cursor: pointer;
-    text-decoration: underline;
-    font-weight: 500;
-    padding: 10px 0;
-}
-.ppo-order-form-container .ppo-quantities-container {
-    display: none;
-}
-.ppo-order-form-container .ppo-sum-warning,
-.ppo-order-form-container .ppo-current-upload-summary-single,
-.ppo-order-form-container .ppo-current-upload-summary-total {
-    display: none;
-}
-.ppo-order-form-container .ppo-buttons-in-quantities {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 15px;
-}
-.ppo-order-form-container .ppo-formats-list-container {
-    display: none; 
-}
-.ppo-order-form-container .ppo-summary form {
-    display: inline;
-}
 .ppo-order-form-container .ppo-hidden-file-input {
     display: none;
 }
@@ -231,22 +196,12 @@ body, .ppo-order-form-container {
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 20px;
-    /*border: 1px solid #e0e0e0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); */
 }
 
-/* Візуальне розділення контейнерів */
-.ppo-order-form-container #ppo-step-1 {
-    background-color: #ffffff; 
-    border: 2px solid var(--ppo-orange);
-    border-radius: 25px;
-}
-.ppo-order-form-container #ppo-step-2 {
-    /*background-color: #f0f8ff; */
-    border: 2px solid var(--ppo-orange);
-    border-radius: 25px;
-}
-.ppo-order-form-container #ppo-summary {
+/* Візуальне розділення контейнерів (застосовується до всіх ppo-step-block) */
+.ppo-order-form-container #ppo-step-1,
+.ppo-order-form-container #ppo-step-2,
+.ppo-order-form-container #ppo-summary { /* Залишаємо ці ідентифікатори, оскільки вони є на сторінці замовлення */
     background-color: #ffffff; 
     border: 2px solid var(--ppo-orange);
     border-radius: 25px;
@@ -260,7 +215,6 @@ body, .ppo-order-form-container {
     margin-bottom: 0;
 }
 
-
 /* Додаткові стилі для кращого розділення */
 .ppo-order-form-container h3,
 .ppo-order-form-container #ppo-summary h3 {
@@ -271,7 +225,6 @@ body, .ppo-order-form-container {
     margin-top: 0; 
     font-weight: 500;
 }
-
 .ppo-order-form-container #photo-print-order-form h4 {
     color: var(--ppo-primary-color);
     border-bottom: 2px solid var(--ppo-primary-color);
@@ -280,27 +233,15 @@ body, .ppo-order-form-container {
     font-weight: 500;
 }
 
-/* ==================================================================== */
 /* 2.5. ВИПРАВЛЕННЯ: КЕРУВАННЯ ВИДИМІСТЮ КРОКУ 2 (ЗАВАНТАЖЕННЯ) */
-/* ==================================================================== */
-/* Додано display: none; для надійності. JS буде його показувати. */
 .ppo-order-form-container #ppo-step-2 {
     display: none; 
 }
 
 
 /* ==================================================================== */
-/* 3. АДАПТАЦІЯ ДЛЯ БЛОКУ ОПЦІЙ (КРОК 1) */
+/* 3. ОПЦІЇ / ПРОГРЕС / МОДАЛКА (Загальні для форми замовлення) */
 /* ==================================================================== */
-
-/* Забезпечуємо стилізацію для об'єднаного блоку опцій (папір, рамка, формат) */
-.ppo-order-form-container #ppo-format-options {
-    padding: 15px;
-    border: 1px dashed var(--ppo-primary-color); 
-    border-radius: 4px;
-    background-color: var(--ppo-white); 
-    margin-bottom: 15px;
-}
 
 .ppo-option-group { 
     margin-bottom: 15px; 
@@ -317,13 +258,6 @@ body, .ppo-order-form-container {
     display: block;
     margin-bottom: 5px;
 }
-/* ВАЖЛИВО: Стилі для міток, які не є частиною тумблера, ігноруються, коли він використовується. */
-.ppo-option-group label[for] {
-    font-weight: 300;
-    display: inline-block;
-    margin-right: 15px;
-}
-
 
 /* ІНТЕГРОВАНО: Стилі для прогрес-бару */
 .ppo-order-form-container .ppo-progress-container { 
@@ -351,25 +285,7 @@ body, .ppo-order-form-container {
     color: var(--ppo-primary-color); 
     font-weight: 500;
 }
-
-/* ІНТЕГРОВАНО: Стилі для Drag & Drop (highlight зони) */
-.ppo-order-form-container .ppo-quantities-container.drag-over { 
-    border: 2px dashed var(--ppo-primary-color); 
-    background: #f9f9f9; 
-    padding: 20px; 
-    text-align: center; 
-    border-radius: 4px; 
-}
-.ppo-order-form-container .ppo-quantities-container.drag-over p { 
-    color: var(--ppo-primary-color); 
-    font-size: 16px; 
-}
-
-/* ФІКС: Анімація для "обробки" після upload */
 .ppo-progress-fill.processing {
-    animation: pulse 1.5s infinite; 
-}
-.ppo-progress-text.processing-text {
     animation: pulse 1.5s infinite; 
 }
 @keyframes pulse {
@@ -398,7 +314,6 @@ body, .ppo-order-form-container {
     background-color: #fefefe;
     margin: 5% auto 0;
     padding: 0;
-    border: none;
     border-radius: 8px;
     width: 80%;
     max-width: 400px;
@@ -462,7 +377,6 @@ body.ppo-modal-open {
 .ppo-segmented-control {
     display: flex; 
     align-items: stretch; 
-    
     border-radius: 999px; 
     background-color: #f0f0f0; 
     padding: 3px; 
@@ -472,19 +386,14 @@ body.ppo-modal-open {
     width: auto; 
     box-sizing: border-box; 
 }
-
-/* Приховуємо стандартні радіо-кнопки */
 .ppo-segmented-control input[type="radio"] {
     display: none;
 }
-
-/* Стилізація міток (сегментів) - повне центрування та фікс переносу */
 .ppo-segmented-control label {
     display: flex; 
     align-items: center; 
     justify-content: center; 
     text-align: center; 
-
     flex: 1; 
     padding: 8px 15px; 
     cursor: pointer;
@@ -493,36 +402,29 @@ body.ppo-modal-open {
     font-weight: 400;
     color: #555; 
     transition: all 0.2s ease-in-out; 
-    
-    white-space: nowrap; /* Фікс переносу */
+    white-space: nowrap; 
     flex-shrink: 1; 
     flex-grow: 1; 
-
     background-color: transparent; 
     box-shadow: none;
     border: none; 
     margin: 0 !important; 
     height: 100%; 
 }
-
-/* Стилізація активного (обраного) сегмента */
 .ppo-segmented-control input[type="radio"]:checked + label {
     background-color: var(--ppo-white); 
     color: var(--ppo-orange); 
     font-weight: 500;
-    /*box-shadow: 0 1px 3px rgba(0,0,0,0.1); */
-    border: 2px solid var(--ppo-orange); /* Додаємо кордон для виділення */
+    border: 2px solid var(--ppo-orange); 
     letter-spacing: 0.1em;
 }
-
-/* Стилізація при наведенні курсору на неактивний сегмент */
 .ppo-segmented-control label:hover:not(:has(+ input[type="radio"]:checked)) {
     background-color: #ffffff; 
 }
 
 
 /* ==================================================================== */
-/* 5. СТИЛІ ДЛЯ ВЕРТИКАЛЬНОГО СПИСКУ ФОРМАТІВ З ЦІНОЮ (ФІНАЛЬНА ВЕРСІЯ З КРУГОМ ТА ПЛАШКОЮ "ГРН") */
+/* 5. СТИЛІ ДЛЯ ВЕРТИКАЛЬНОГО СПИСКУ ФОРМАТІВ З ЦІНОЮ */
 /* ==================================================================== */
 
 .ppo-format-button-list {
@@ -530,145 +432,96 @@ body.ppo-modal-open {
     padding: 0;
     margin: 5px 0 0 0; 
 }
-
-/* 1. Обгортка - Flex-контейнер для вирівнювання КНОПКА | ЦІНА */
 .ppo-format-item {
     margin-bottom: 8px; 
     display: flex; 
     align-items: center; 
 }
-
 .ppo-format-item input[type="radio"] {
     display: none; 
 }
-
-/* 2. Стилізація самої КНОПКИ (Label) */
 .ppo-format-label {
     display: flex; 
     align-items: center; 
     justify-content: flex-start; 
-    
     flex-grow: 1; 
     position: relative; 
     z-index: 2; 
-    
     margin-right: 15px; 
-    
-    /* Стиль КНОПКИ */
     padding: 5px 15px; 
     border-radius: 999px; 
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    
-    /* Неактивний вигляд */
     background-color: var(--ppo-white); 
     border: 1px solid #ddd;
     color: #555;
     font-weight: 400;
 }
-
-/* *** ВИПРАВЛЕННЯ: Підвищена специфічність для коректного HOVER неактивної кнопки *** */
 .ppo-format-item input[type="radio"]:not(:checked) + .ppo-format-label:hover {
     background-color: #f7f7f7;
     border-color: #ccc;
     color: #333; 
 }
-
 .ppo-format-name {
     white-space: nowrap; 
     overflow: hidden;
     text-overflow: ellipsis;
     margin-right: 10px;
 }
-
-/* 3. Кружечок з ціною - фіксований стовпчик */
+/* Кружечок з ціною */
 .ppo-price-circle {
-    /* Зміни: тепер елементи всередині кружечка вирівнюються, 
-       а сам кружечок стає контейнером для абсолютно позиціонованої плашки "грн" */
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    /* ВСТАНОВЛЮЄМО ФІКСОВАНУ ВИСОТУ І ШИРИНУ ДЛЯ КРУГЛОЇ ФОРМИ */
     width: 45px; 
     height: 45px; 
     min-width: 45px; 
-    
     flex-shrink: 0; 
-    position: relative; /* ВАЖЛИВО: для позиціонування дочірнього елемента "грн" */
+    position: relative; 
     z-index: 2; 
-    
     margin-left: -5px; 
-    
     border-radius: 50%; 
     background-color: var(--ppo-white); 
-    border: 2px solid #e0e0e0; /* Неактивний кордон */
+    border: 2px solid #e0e0e0; 
     color: var(--ppo-text-color);
     font-size: 13px;
     font-weight: 500;
-    
     transition: all 0.2s ease-in-out;
 }
-
-/* НОВЕ: Стилі для значення ціни всередині кружечка (щоб уникнути перекриття плашкою) */
 .ppo-price-circle .ppo-price-value {
-    font-size: 1em; 
-    line-height: 1;
-    /* Якщо ціна дуже велика, можна додати тут padding, але зазвичай достатньо */
     font-size: 16px;
 }
-
-/* ------------------------------------------------ */
-/* НОВЕ: СТИЛІ ПЛАШКИ "грн" */
-/* ------------------------------------------------ */
+/* Плашка "грн" */
 .ppo-currency-badge {
     position: absolute;
-    bottom: -5px; /* Перекриває кружечок знизу */
-    right: -5px;  /* Перекриває кружечок справа */
-    
-    background-color: var(--ppo-red-badge); /* Червона заливка */
-    color: var(--ppo-white);              /* Білий текст */
-    
+    bottom: -5px; 
+    right: -5px; 
+    background-color: var(--ppo-red-badge); 
+    color: var(--ppo-white); 
     padding: 2px 5px;
-    border-radius: 4px; /* Трохи заокруглені кути плашки */
-    font-size: 10px;    /* Маленький шрифт */
+    border-radius: 4px; 
+    font-size: 10px; 
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;
-    z-index: 3; /* Поверх кружечка */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Тінь для об'єму */
-    border: 1px solid rgba(0,0,0,0.1); /* Легкий кордон */
+    z-index: 3; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+    border: 1px solid rgba(0,0,0,0.1); 
 }
-
-
-/* ------------------------------------------------ */
 /* СТИЛІ АКТИВНОГО (ВИБРАНОГО) ФОРМАТУ */
-/* ------------------------------------------------ */
-
-/* 1. Вибрана кнопка формату (Label) */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label {
-    /* Синя заливка в середині кнопки */
     background-color: var(--ppo-orange); 
-    /*border-color: var(--ppo-primary-color);*/
-    /* Білий текст */
     color: var(--ppo-white); 
     font-weight: 500;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-
-/* HOVER для АКТИВНОЇ кнопки (залишається без змін) */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label:hover {
-    /* Робимо фон трохи світлішим, щоб візуально підтвердити ховер */
     background-color: #f5a86d; 
     color: var(--ppo-white);
 }
-
-/* Стилізація імені формату всередині синьої кнопки */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label .ppo-format-name {
-      /* Білий текст для назви */
     color: var(--ppo-white); 
 }
-
 /* ЛІНІЯ: Створюємо синю лінію між кнопкою та кружечком */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label::after {
     content: '';
@@ -681,107 +534,51 @@ body.ppo-modal-open {
     transform: translateY(-50%);
     z-index: 1; 
 }
-
-/* 2. Вибраний кружечок з ціною (ppo-price-circle) */
+/* Вибраний кружечок з ціною */
 .ppo-format-item input[type="radio"]:checked + .ppo-format-label + .ppo-price-circle {
-    /* Синій кордон кнопки */
     border: 2px solid var(--ppo-orange); 
-    /* Біла заливка (залишається білою) */
     background-color: var(--ppo-white); 
-    /* Синій текст */
     color: var(--ppo-primary-color); 
     font-weight: 600;
     width: 55px;
     height: 55px;
-
 }
-
-
-
 #label-h2 {
-    /* Стилі тільки для напису "РОЗМІР ФОТО:" */
     font-size: 1.2rem;
     color: var(--ppo-text-color-h2);
-    
-    display: block; /* Щоб займав окремий рядок */
+    display: block; 
     margin-bottom: 10px;
-    
 }
 
-/* Custom PPO Form Styles (Доповнення до основного CSS-файлу) */
+/* =========== 6. СТИЛІ ДЛЯ ЗАВАНТАЖЕННЯ ФОТО (photo-item) =========== */
 
-/* =========== 1. СТИЛІ ДЛЯ ЗАВАНТАЖЕННЯ ФОТО (photo-item) =========== */
-
-/* Контейнер для окремого фото та елементів керування */
 .ppo-photo-quantities .photo-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
     border-bottom: 1px dashed #e0e0e0;
 }
-
-/* Контейнер мініатюри */
 .photo-item .photo-thumbnail-container {
-    width: 40px;
-    height: 40px;
-    margin-right: 15px;
-    overflow: hidden;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     background-color: #f0f0f0;
-    font-size: 20px; /* Для символу 📄 */
+    font-size: 20px; 
 }
-
-.photo-item .photo-thumbnail-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Назва файлу */
-.photo-item label {
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 14px;
-    margin-right: 15px;
-}
-
-/* Поле вводу копій */
 .photo-item input[type="number"] {
     width: 60px;
-    padding: 5px;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 4px;
     margin-right: 15px;
 }
-
-/* Кнопка видалення */
 .photo-item .remove-file-btn {
     background: none; 
     border: none; 
-    color: #dc3545; /* Червоний */
+    color: #dc3545; 
     cursor: pointer;
     font-size: 20px;
     padding: 0;
     line-height: 1;
 }
 
-/* =========== 2. СТИЛІ ДЛЯ DRAG-AND-DROP =========== */
-
-/* Візуальний ефект при перетягуванні файлів */
+/* =========== 7. СТИЛІ ДЛЯ DRAG-AND-DROP ТА КРУЖЕЧКА =========== */
 #ppo-step-2.drag-over {
     border: 2px dashed #007bff;
     background-color: #e6f7ff;
     border-radius: 8px;
 }
-
-/* Стилі для посилань-закликів */
 .ppo-add-photos-link {
     text-align: center;
     color: #0073aa; 
@@ -789,76 +586,9 @@ body.ppo-modal-open {
     text-decoration: underline; 
     font-weight: bold; 
     padding: 10px 0;
-    display: block; /* Забезпечує, що посилання займає всю ширину */
-}
-
-/* Стан, коли досягнуто максимуму файлів */
-.ppo-add-photos-link[style*="color: rgb(204, 204, 204)"] {
-    color: #ccc !important;
-    cursor: default !important;
-    text-decoration: none !important;
-}
-
-/* Стиль для попередження про скидання опцій */
-#ppo-quantities .ppo-add-photos-link[style*="color: rgb(204, 0, 0)"] {
-    color: #cc0000 !important;
-    cursor: default !important;
-    text-decoration: none !important;
-}
-
-/* =========== 3. СТИЛІ ДЛЯ МОДАЛЬНОГО ВІКНА ТА ПРОГРЕСУ =========== */
-
-/* Клас для body при відкритому модальному вікні */
-body.ppo-modal-open {
-    overflow: hidden;
-}
-
-.ppo-modal {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.ppo-modal.show {
-    opacity: 1;
-}
-
-.ppo-progress-fill.processing {
-    background-color: #ffc107; /* Жовтий - обробка */
-}
-
-.ppo-progress-text.processing-text {
-    color: #ffc107;
-}
-
-/* =========== 4. Стилі для прихованих елементів (чистка) =========== */
-
-/* Ці стилі були inline, але їх краще контролювати через класи або основний CSS */
-
-/* Приховати крок 1, якщо є файли (JS буде застосовувати style.display = 'none';)
-#ppo-step-1[style*="display: none"] { ... } */
-
-/* Приховати контейнер прогресу (JS буде застосовувати display: none)
-#ppo-progress-container[style*="display: none"] { ... } */
-
-/* ... існуючі стилі ... */
-
-/* Стилі для посилань-закликів та інформаційних блоків */
-.ppo-add-photos-link {
-    /* Цей клас тепер може бути використаний лише для центрування, якщо він є у старому JS */
-    text-align: center;
     display: block; 
     margin: 15px 0; 
 }
-
-/* Новий стиль для інформаційного тексту під плюсиком */
-.ppo-add-photos-link-info {
-    text-align: center;
-    font-size: 13px;
-    color: #6c757d;
-    margin-top: 50px; /* Підтягуємо ближче до кружечка */
-}
-
-/* Стилі для плюсика в кружечку */
 .ppo-add-photos-circle {
     display: flex;
     justify-content: center;
@@ -870,16 +600,13 @@ body.ppo-modal-open {
     font-size: 30px;
     color: var(--ppo-orange);
     cursor: pointer;
-    margin: 20px auto 15px auto; /* Центрування та відступ знизу */
+    margin: 20px auto 15px auto; 
     transition: all 0.2s ease-in-out;
 }
-
 .ppo-add-photos-circle:hover {
     background-color: #e6f7ff;
     transform: scale(1.05);
 }
-
-/* Стан, коли досягнуто максимуму файлів */
 .ppo-add-photos-circle.disabled {
     border-color: #ccc;
     color: #ccc;
@@ -889,77 +616,46 @@ body.ppo-modal-open {
 
 
 /* ==================================================================== */
-/* 7. ВИПРАВЛЕННЯ: ВИРІВНЮВАННЯ ТА РОЗМІР КНОПОК ОЧИСТИТИ/ЗАМОВИТИ */
-/* ==================================================================== */
-
-
-
-#ppo-submit-container .ppo-button {
-    /* Робимо кнопку гнучким контейнером, щоб центрувати текст по вертикалі */
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    
-    /* Встановлюємо ФІКСОВАНУ висоту для обох кнопок */
-    height: 40px; 
-    
-    /* Дозволяємо кнопкам рівномірно розтягуватися по ширині */
-    flex-grow: 1; 
-    
-    /* Забезпечуємо, що padding та border не збільшують загальний розмір */
-    box-sizing: border-box;
-}
-
-
-
-/* Оскільки #ppo-submit-container має align-items: stretch;, 
- * це гарантує, що обидві кнопки будуть однакової висоти (40px) 
- * та розділять простір порівну (flex-grow: 1).
- */
-
- /* ==================================================================== */
 /* 8. СТИЛІ ДЛЯ БЛОКУ "ДЕТАЛІ ЗАМОВЛЕННЯ" (SUMMARY) */
 /* ==================================================================== */
 
-/* 1. Прибираємо маркер списку (точку) та стандартні відступи */
 .ppo-order-form-container ul#ppo-formats-list {
-    list-style: none; /* Прибрати стандартні маркери (крапки) */
-    padding-left: 0;  /* Прибрати стандартний відступ зліва для списку */
+    list-style: none; 
+    padding-left: 0; 
     margin-top: 10px;
     margin-bottom: 15px;
 }
-
-/* 2. Додаємо тонку лінію-роздільник між елементами списку */
 .ppo-order-form-container ul#ppo-formats-list li {
-    padding: 8px 0; /* Внутрішній відступ зверху та знизу для розділення тексту */
-    border-bottom: 1px solid #eeeeee; /* Дуже тонка і світла лінія */
-    color: var(--ppo-text-color); /* Колір тексту */
+    padding: 8px 0; 
+    border-bottom: 1px solid #eeeeee; 
+    color: var(--ppo-text-color); 
     font-size: 14px;
-    font-weight: 400; /* Не жирний */
+    font-weight: 400; 
 }
-
-/* Прибираємо лінію після останнього елемента, щоб не було зайвого роздільника */
 .ppo-order-form-container ul#ppo-formats-list li:last-child {
     border-bottom: none;
 }
-
-/* 3. Стилізація загальної суми для кращого контрасту */
 .ppo-order-form-container .ppo-total-sum {
     font-size: 1.1em;
     padding-top: 10px;
-    border-top: 2px solid var(--ppo-orange); /* Виділяємо загальну суму більш помітною лінією */
+    border-top: 2px solid var(--ppo-orange); 
     margin-top: 15px;
 }
-
-/* Виділяємо саму суму жирним */
 .ppo-order-form-container #ppo-session-total {
     font-weight: 700;
     color: var(--ppo-primary-color);
 }
-
-/* Невеликий шрифт для загальної кількості копій */
 .ppo-order-form-container .ppo-total-sum small {
     font-size: 0.8em;
     font-weight: 400;
     color: #6c757d;
+}
+
+/* СТИЛІ, ЯКІ БУЛИ ВСТАНОВЛЕНІ ЯК display: none; */
+.ppo-order-form-container .ppo-quantities-container,
+.ppo-order-form-container .ppo-sum-warning,
+.ppo-order-form-container .ppo-current-upload-summary-single,
+.ppo-order-form-container .ppo-current-upload-summary-total,
+.ppo-order-form-container .ppo-formats-list-container {
+    display: none;
 }

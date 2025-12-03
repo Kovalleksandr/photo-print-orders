@@ -15,11 +15,11 @@ if (!defined('ABSPATH')) {
 // 1. КОНФІГУРАЦІЯ ТА ВКЛЮЧЕННЯ ФАЙЛІВ
 // ====================================================================
 
-// Визначення шляху до плагіна: Використовуємо dirname(__FILE__) для надійності
+// Визначення шляху до плагіна
 define('PPO_PLUGIN_DIR', dirname(__FILE__) . '/');
 define('PPO_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-// !!! АВТОЗАВАНТАЖЕННЯ COMPOSER (ВИПРАВЛЕНО та КОНСОЛІДОВАНО) !!!
+// АВТОЗАВАНТАЖЕННЯ COMPOSER
 $composer_autoload_path = PPO_PLUGIN_DIR . 'vendor/autoload.php';
 
 if (file_exists($composer_autoload_path)) {
@@ -30,7 +30,7 @@ if (file_exists($composer_autoload_path)) {
 // --- КІНЕЦЬ БЛОКУ COMPOSER ---
 
 
-// Завантаження конфігурації (має бути після Composer, якщо він використовує конфіги)
+// Завантаження конфігурації 
 require_once PPO_PLUGIN_DIR . 'ppo-config.php';
 
 // Завантаження класів та допоміжних функцій
@@ -52,7 +52,7 @@ require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-render-payment.php';
 require_once PPO_PLUGIN_DIR . 'includes/delivery/api/ppo-nova-poshta-api.php';
 require_once PPO_PLUGIN_DIR . 'includes/delivery/ppo-novaposhta-ajax.php';
 
-// !!! ФАЙЛ ОБРОБНИКА LIQPAY CALLBACK !!!
+// ФАЙЛ ОБРОБНИКА LIQPAY CALLBACK
 require_once PPO_PLUGIN_DIR . 'includes/payment/ppo-liqpay-callback.php';
 
 // ====================================================================
@@ -98,6 +98,8 @@ add_action('init', 'ppo_check_clear_session');
  */
 function ppo_enqueue_scripts() {
     global $post;
+    
+    // Перевіряємо, чи знаходимося ми на одній із цільових сторінок форм
     $is_order_page = is_a($post, 'WP_Post') && (
         has_shortcode($post->post_content, 'ppo_order_form') || 
         has_shortcode($post->post_content, 'ppo_delivery_form') || 
@@ -108,6 +110,14 @@ function ppo_enqueue_scripts() {
         return;
     }
     
+    // 1. СТИЛІ: Підключаємо основні стилі для всіх форм (ppo-forms.css)
+    wp_enqueue_style(
+        'ppo-forms',
+        PPO_PLUGIN_URL . 'assets/ppo-forms.css',
+        [],
+        filemtime(PPO_PLUGIN_DIR . 'assets/ppo-forms.css')
+    );
+
     // Включаємо jQuery
     wp_enqueue_script('jquery'); 
 
@@ -120,17 +130,19 @@ function ppo_enqueue_scripts() {
         true
     );
 
-    // Підключаємо стилі
-    wp_enqueue_style(
-        'ppo-forms',
-        PPO_PLUGIN_URL . 'assets/ppo-forms.css',
-        [],
-        filemtime(PPO_PLUGIN_DIR . 'assets/ppo-forms.css')
-    );
 
-    // Підключення скрипта Нової Пошти лише на сторінці доставки
+    // 2. СТИЛІ ТА СКРИПТИ ДЛЯ СТОРІНКИ ДОСТАВКИ (Нова Пошта)
     if (has_shortcode($post->post_content, 'ppo_delivery_form')) {
-        // Підключаємо стилі для jQuery UI Autocomplete
+        
+        // Підключаємо додаткові стилі для форми доставки (ppo-delivery-styles.css)
+        wp_enqueue_style(
+            'ppo-delivery-styles',
+            PPO_PLUGIN_URL . 'assets/ppo-delivery-styles.css',
+            ['ppo-forms'],
+            filemtime(PPO_PLUGIN_DIR . 'assets/ppo-delivery-styles.css')
+        );
+
+        // Підключаємо стилі для jQuery UI Autocomplete (для NP)
         wp_enqueue_style('jquery-ui-css', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css');
         
         wp_enqueue_script('jquery-ui-autocomplete');
@@ -148,17 +160,30 @@ function ppo_enqueue_scripts() {
             'nonce' => wp_create_nonce('ppo_np_nonce')
         ]);
     }
+    
+    // 3. СТИЛІ ДЛЯ СТОРІНКИ ОПЛАТИ (НОВИЙ БЛОК)
+    if (has_shortcode($post->post_content, 'ppo_payment_form')) {
+        // Підключаємо стилі для форми оплати (ppo-payment-styles.css)
+        wp_enqueue_style(
+            'ppo-payment-styles',
+            PPO_PLUGIN_URL . 'assets/ppo-payment-styles.css',
+            ['ppo-forms'], // Залежить від базових стилів
+            filemtime(PPO_PLUGIN_DIR . 'assets/ppo-payment-styles.css')
+        );
+    }
+
 
     // Передача даних PHP в JavaScript (Локалізація)
+    // Цей масив очищений від невидимих символів
     wp_localize_script('ppo-ajax-script', 'ppo_ajax_object', [
-        'ajax_url'              => admin_url('admin-ajax.php'),
-        'nonce'                 => wp_create_nonce('ppo_file_upload_nonce'),
-        'np_nonce'              => wp_create_nonce('ppo_np_nonce'), 
-        'min_sum'               => MIN_ORDER_SUM,
-        'prices'                => PHOTO_PRICES,
-        'max_files'             => MAX_FILES_PER_UPLOAD,
-        'session_formats'       => isset($_SESSION['ppo_formats']) ? array_filter($_SESSION['ppo_formats'], 'is_array') : new stdClass(),
-        'session_total'         => $_SESSION['ppo_total'] ?? 0,
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('ppo_file_upload_nonce'),
+        'np_nonce' => wp_create_nonce('ppo_np_nonce'), 
+        'min_sum' => MIN_ORDER_SUM,
+        'prices' => PHOTO_PRICES,
+        'max_files' => MAX_FILES_PER_UPLOAD,
+        'session_formats' => isset($_SESSION['ppo_formats']) ? array_filter($_SESSION['ppo_formats'], 'is_array') : new stdClass(),
+        'session_total' => $_SESSION['ppo_total'] ?? 0,
     ]);
 }
 add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
@@ -170,7 +195,7 @@ add_action('wp_enqueue_scripts', 'ppo_enqueue_scripts');
 add_shortcode('ppo_order_form', 'ppo_render_order_form');
 add_shortcode('ppo_delivery_form', 'ppo_render_delivery_form');
 add_shortcode('ppo_payment_form', 'ppo_render_payment_form');
-add_shortcode('ppo_payment_result', 'ppo_render_payment_result'); // Новий шорткод для результату платежу
+add_shortcode('ppo_payment_result', 'ppo_render_payment_result');
 
 // ====================================================================
 // 5. ОБРОБНИКИ ФОРМ ТА КНОПОК
@@ -281,7 +306,7 @@ function ppo_deactivate_plugin_liqpay() {
 
 
 // ====================================================================
-// 8. АДМІН-СТОРІНКА ДЛЯ НАЛАШТУВАНЬ API НОВО Ї ПОШТИ
+// 8. АДМІН-СТОРІНКА ДЛЯ НАЛАШТУВАНЬ API НОВОЇ ПОШТИ
 // ====================================================================
 
 add_action('admin_menu', 'ppo_add_np_settings');

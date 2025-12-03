@@ -1,5 +1,5 @@
 <?php
-// includes/form/ppo-delivery-form.php
+// includes/delivery/ppo-render-delivery.php (Припустимо, що це шлях)
 
 if (!defined('ABSPATH')) {
     exit;
@@ -29,7 +29,7 @@ function ppo_render_delivery_form() {
 
     <div class="ppo-order-form-container ppo-delivery-page">
     
-        <h2>Крок 2: Доставка та контактні дані</h2>
+        <h2></h2>
     
         <?php if (!empty($error_message)): ?>
             <div class="ppo-message ppo-message-error" style="border-left: 5px solid red;"><p><strong>Помилка:</strong> <?php echo esc_html(urldecode($error_message)); ?></p></div>
@@ -39,17 +39,17 @@ function ppo_render_delivery_form() {
             <?php wp_nonce_field('ppo_delivery_action', 'ppo_delivery_nonce'); ?>
         
             <div class="ppo-step-block ppo-contact-block">
-                <h3>КОНТАКТІ ДАНІ ОТРИМУВАЧА</h3>
+                <h3>КОНТАКТИ ОТРИМУВАЧА</h3>
                 <div class="ppo-form-group">
-                    <label for="contact_name">ПІБ (повністю)</label>
+                    <label id="label-h2" for="contact_name">ПІБ (повністю)</label>
                     <input type="text" id="contact_name" name="contact_name" value="<?php echo esc_attr($contact_info['name'] ?? ''); ?>" required>
                 </div>
                 <div class="ppo-form-group">
-                    <label for="contact_phone">Телефон</label>
+                    <label id="label-h2" for="contact_phone">ТЕЛЕФОН</label>
                     <input type="tel" id="contact_phone" name="contact_phone" value="<?php echo esc_attr($contact_info['phone'] ?? ''); ?>" required>
                 </div>
                 <div class="ppo-form-group">
-                    <label for="contact_email">Email</label>
+                    <label id="label-h2" for="contact_email">Email</label>
                     <input type="email" id="contact_email" name="contact_email" value="<?php echo esc_attr($contact_info['email'] ?? ''); ?>" required>
                 </div>
             </div>
@@ -59,7 +59,7 @@ function ppo_render_delivery_form() {
                 <div class="ppo-form-group">
                     <label>
                         <input type="radio" name="delivery_type" value="novaposhta_warehouse" checked required>
-                        Нова Пошта (Відділення або Поштомат)
+                        Нова Пошта (відділення або поштомат)
                     </label>
                 </div>
         
@@ -67,14 +67,14 @@ function ppo_render_delivery_form() {
                     <h3>АДРЕСА НОВОЇ ПОШТИ</h3>
             
                     <div class="ppo-form-group ppo-autocomplete-container">
-                        <label for="np-city-name">Місто (Населений пункт)</label>
+                        <label id="label-h2" for="np-city-name">МІСТО (Населений пункт)</label>
                         <input type="text" id="np-city-name" name="np_city_name" value="<?php echo esc_attr($city_name); ?>" placeholder="Почніть вводити назву міста..." required autocomplete="off">
                         <input type="hidden" id="np-city-ref" name="np_city_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['city_ref'] ?? ''); ?>" required>
                         <ul id="np-city-list" class="ppo-autocomplete-list" style="display: none;"></ul>
                     </div>
 
                     <div class="ppo-form-group ppo-autocomplete-container">
-                        <label for="np-warehouse-name">Відділення / Поштомат</label>
+                        <label id="label-h2" for="np-warehouse-name">ВІДДІЛЕННЯ/ПОШТОМАТ</label>
                         <input type="text" id="np-warehouse-name" name="np_warehouse_name" value="<?php echo esc_attr($warehouse_name); ?>" placeholder="Оберіть місто, а потім почніть вводити назву відділення..." required autocomplete="off" <?php echo empty($city_name) ? 'disabled' : ''; ?>>
                         <input type="hidden" id="np-warehouse-ref" name="np_warehouse_ref" value="<?php echo esc_attr($_SESSION['ppo_delivery_details_array']['warehouse_ref'] ?? ''); ?>" required>
                         <ul id="np-warehouse-list" class="ppo-autocomplete-list" style="display: none;"></ul>
@@ -82,14 +82,15 @@ function ppo_render_delivery_form() {
                 </div>
             </div>
             
-            <div class="ppo-buttons-container">
-                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary">← НАЗАД</a>
-                <input type="submit" name="ppo_delivery_submit" value="ДО ОПЛАТИ →" class="ppo-button ppo-button-primary">
+            <div class="ppo-buttons-container ppo-delivery-actions">
+                <a href="<?php echo esc_url(home_url('/order/')); ?>" class="ppo-button ppo-button-secondary ppo-action-button">← НАЗАД</a>
+                <input type="submit" name="ppo_delivery_submit" value="ДО ОПЛАТИ →" class="ppo-button ppo-button-primary ppo-action-button">
             </div>
         </form>
 
         <?php 
         // Підключаємо скрипти Нової Пошти
+        // Припускаємо, що PPO_NovaPoshta_JS_Handler визначено в ppo-novaposhta-ajax.php
         if (class_exists('PPO_NovaPoshta_JS_Handler')) {
             PPO_NovaPoshta_JS_Handler::enqueue_scripts();
         }

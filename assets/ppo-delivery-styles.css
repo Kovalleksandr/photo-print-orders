@@ -1,0 +1,167 @@
+/* ==================================================================== */
+/* ppo-delivery-styles.css: Стилі для Кроку 2 (Доставка) */
+/* ==================================================================== */
+
+/* Контейнер сторінки доставки */
+.ppo-delivery-page {
+    /* Додаткове форматування, якщо необхідно відступити від країв */
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+}
+
+/* Заголовок сторінки */
+.ppo-delivery-page h2 {
+    color: var(--ppo-primary-color);
+    font-weight: 500;
+    font-size: 1.8em;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* Блок контакту та доставки - використовуємо спільний .ppo-step-block */
+.ppo-delivery-page .ppo-step-block {
+    /* Наслідуємо стилі з ppo-forms.css: border, padding, background */
+    border: 2px solid var(--ppo-orange);
+    border-radius: 25px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: var(--ppo-white); 
+}
+
+/* Заголовки блоків (КОНТАКТНІ ДАНІ, СПОСІБ ДОСТАВКИ) */
+.ppo-delivery-page .ppo-step-block h3 {
+    /* Наслідуємо стилі з ppo-forms.css: колір, лінія-роздільник */
+    color: var(--ppo-primary-color);
+    border-bottom: 2px solid var(--ppo-primary-color);
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+    margin-top: 0; 
+    font-weight: 500;
+}
+
+/* Група полів форми */
+.ppo-form-group {
+    margin-bottom: 15px;
+}
+
+.ppo-form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: var(--ppo-text-color);
+}
+
+.ppo-form-group input[type="text"],
+.ppo-form-group input[type="tel"],
+.ppo-form-group input[type="email"],
+.ppo-form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.ppo-form-group input:focus {
+    border-color: var(--ppo-orange);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(241, 184, 130, 0.5); /* Ефект фокусу, як у кнопок */
+}
+
+/* Стилі для радіо-кнопки (вибір способу доставки) */
+.ppo-delivery-type-block .ppo-form-group label {
+    display: flex;
+    align-items: center;
+    font-weight: 400; /* Звичайний шрифт для тексту мітки */
+    cursor: pointer;
+}
+
+.ppo-delivery-type-block input[type="radio"] {
+    /* Базовий стиль радіо-кнопки */
+    margin-right: 10px;
+    width: 16px;
+    height: 16px;
+}
+
+
+/* --------------------------------------------------------------------------------
+ * Автозаповнення Нової Пошти (NP Autocomplete)
+ * -------------------------------------------------------------------------------- */
+
+/* Контейнер для списків автозаповнення */
+.ppo-autocomplete-container {
+    position: relative;
+}
+
+.ppo-autocomplete-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--ppo-white);
+    border: 1px solid #ccc;
+    border-top: none;
+    z-index: 100;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 0 0 4px 4px;
+}
+
+.ppo-autocomplete-list li {
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.1s;
+}
+
+.ppo-autocomplete-list li:hover {
+    background-color: #f0f8ff; /* Легкий синій фон при наведенні */
+}
+
+/* --------------------------------------------------------------------------------
+ * Кнопки НАЗАД / ДО ОПЛАТИ
+ * -------------------------------------------------------------------------------- */
+
+.ppo-buttons-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+}
+
+/* Наслідування стилів кнопок (ppo-button-secondary, ppo-button-primary) 
+ * відбувається з ppo-forms.css
+ */
+.ppo-buttons-container .ppo-button {
+    /* Спільне форматування, щоб кнопки були однакові */
+    height: 45px;
+    flex-basis: 48%; /* Щоб обидві кнопки займали майже половину ширини */
+    text-align: center;
+    line-height: 25px;
+    text-transform: uppercase;
+}
+
+
+
+/* ========================================================= */
+/* СТИЛІ ДЛЯ ВИРІВНЮВАННЯ КНОПОК НА ФОРМАХ (СЕКЦІЯ 3) */
+/* ========================================================= */
+
+.ppo-delivery-actions {
+    display: flex;
+    gap: 15px; 
+    align-items: center; 
+    margin-top: 30px;
+}
+
+.ppo-delivery-actions .ppo-action-button {
+    flex-grow: 1; 
+    padding: 12px 20px; 
+    box-sizing: border-box; 
+    text-align: center;
+    display: block; 
+}

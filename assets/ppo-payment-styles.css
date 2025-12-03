@@ -1,0 +1,114 @@
+/* ========================================================= */
+/* СТИЛІ ДЛЯ СТОРІНКИ ОПЛАТИ (ppo-payment-styles.css) */
+/* ========================================================= */
+
+.ppo-payment-page {
+    /* Додаткові стилі для контейнера сторінки оплати */
+}
+
+/* 1. Блок деталей платежу з оранжевим кордоном та радіусами */
+.ppo-payment-info-block {
+    background: #fff;
+    border: 1px solid #ff8c00; /* Основний оранжевий колір */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
+    padding: 20px;
+    border-radius: 8px; 
+    margin-bottom: 25px;
+}
+
+/* Загальна сума */
+.ppo-total-sum {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+    padding: 10px 0;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 20px;
+}
+
+.ppo-total-sum strong {
+    color: #d9534f;
+}
+
+/* Заголовок способу оплати */
+.ppo-method-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+
+/* ========================================================= */
+/* 2. СТИЛІ КНОПОК: Поруч та однакового розміру (ПОСИЛЕНО) */
+/* ========================================================= */
+
+/* Контейнер для кнопок: використовуємо Flexbox */
+.ppo-delivery-actions {
+    display: flex;
+    gap: 15px; 
+    align-items: stretch; /* Вирівнює елементи по висоті */
+    padding-top: 20px;
+    border-top: 1px solid #eee; /* Легкий роздільник над кнопками */
+    margin-top: 20px;
+    margin-bottom: 0;
+}
+
+/* Спільний клас для обох елементів (для рівної ширини) */
+.ppo-action-button {
+    flex-grow: 1; 
+    flex-basis: 0; /* ДОПОМАГАЄ Flexbox рівномірно розподілити простір */
+}
+
+/* 2.1 Стилізація кнопки "НАЗАД" (посилання) */
+.ppo-delivery-actions .ppo-button-secondary {
+    display: block; 
+    width: 100%;
+    text-align: center;
+    /*padding: 12px 20px;*/
+    box-sizing: border-box; /* Гарантуємо коректну ширину */
+}
+
+/* 2.2 Стилізація кнопки LiqPay */
+
+/* Обгортка LiqPay форми. Прибираємо margin, щоб не ламати Flexbox */
+.ppo-payment-liqpay-wrapper .cnb {
+    margin: 0 !important;
+    height: 100%;
+}
+
+/* Стилізація самої кнопки LiqPay */
+.ppo-payment-liqpay-wrapper .cnb .btn {
+    display: block !important; 
+    width: 100% !important; /* !!! ГАРАНТІЯ: Примусова повна ширина !!! */
+    box-sizing: border-box !important; /* !!! ГАРАНТІЯ: Включаємо padding/border у ширину !!! */
+    height: 100%; 
+    
+    /* Дизайн кнопки */
+    padding: 12px 20px;
+    margin-top: 0 !important; 
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.5;
+    text-align: center;
+    color: #fff;
+    background-color: #5cb85c; /* Зелений для оплати */
+    border: 1px solid #4cae4c;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.ppo-payment-liqpay-wrapper .cnb .btn:hover {
+    background-color: #449d44;
+}
+
+/* Примітка */
+.ppo-note {
+    font-size: 0.9em;
+    color: #777;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    text-align: center;
+}
