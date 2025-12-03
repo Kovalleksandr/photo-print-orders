@@ -20,11 +20,12 @@ function ppo_render_order_form() {
     // !!! ФУНКЦІЯ: Збираємо поточні опції сесії для відображення в підсумках
     function get_option_label($key) {
         $map = [
-            'gloss' => 'Глянець',
+            'glossy' => 'Глянець',
             'matte' => 'Матовий',
-            'frameoff' => 'Без рамки',
-            'frameon' => 'З рамкою',
+            'none' => 'Без рамки',
+            'yes' => 'З рамкою',
         ];
+        // Ми змінили ключі на 'glossy', 'matte', 'none', 'yes' для відповідності HTML-формі
         return $map[$key] ?? $key;
     }
     
@@ -54,13 +55,7 @@ function ppo_render_order_form() {
                 </div>
             </div>
         </div>
-    
-          
-        <?php /*
-        <p>Мінімальна сума замовлення для одного формату <?php echo $min_order_sum; ?> грн.</p>
-        <p>Завантажуйте по <?php echo MAX_FILES_PER_UPLOAD; ?> фото.</p>
-        */ ?>
-
+        
         <form id="photo-print-order-form" enctype="multipart/form-data">
             <input 
                 type="file" 
@@ -94,7 +89,6 @@ function ppo_render_order_form() {
 
                         <input type="radio" name="frame" id="frame-yes" value="yes">
                         <label for="frame-yes">З РАМКОЮ
-
                         </label>
                     </div>
                 </div>
@@ -211,9 +205,11 @@ function ppo_render_order_form() {
                 <p class="ppo-total-sum">
                     Загальна сума замовлення: <span id="ppo-session-total"><?php echo esc_html(number_format($session_total_display, 2, '.', '')); ?> грн <small>(Всього шт.: <?php echo esc_html($total_copies_overall); ?>)</small></span>
                 </p>
-                <div class="ppo-buttons-container" id="ppo-submit-container">
-                    <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ОЧИСТИТИ</a>
-                    <form method="post" style="display: inline;">
+                <div class="ppo-buttons-container ppo-summary-buttons">
+                    <div class="ppo-action-wrapper">
+                        <a href="<?php echo esc_url(home_url('/order/?clear_session=1')); ?>" class="ppo-button ppo-button-secondary ppo-clear-session-link">ОЧИСТИТИ</a>
+                    </div>
+                    <form method="post" class="ppo-action-wrapper">
                         <?php wp_nonce_field('ppo_delivery_nonce', 'ppo_nonce'); ?>
                         <input type="submit" name="ppo_go_to_delivery" value="ЗАМОВИТИ" class="ppo-button ppo-button-primary">
                     </form>

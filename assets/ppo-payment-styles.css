@@ -2,106 +2,263 @@
 /* СТИЛІ ДЛЯ СТОРІНКИ ОПЛАТИ (ppo-payment-styles.css) */
 /* ========================================================= */
 
-.ppo-payment-page {
-    /* Додаткові стилі для контейнера сторінки оплати */
+:root {
+    /* Прикладні змінні кольорів */
+    --ppo-primary-color: #3a3a3a; 
+    --ppo-secondary-color: #6c757d; 
+    --ppo-orange: #f1b882; 
+    --ppo-red-badge: #dc3545; 
+    --ppo-success-green: #5cb85c; 
+    --ppo-success-green-hover: #449d44;
+    --ppo-white: #ffffff; 
+    --ppo-text-color: #3a3a3a;
+    --ppo-border-radius: 4px;
 }
 
-/* 1. Блок деталей платежу з оранжевим кордоном та радіусами */
-.ppo-payment-info-block {
+.ppo-payment-page {
+    /* Стилі для контейнера сторінки оплати */
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* 0. УНІФІКОВАНІ СТИЛІ БЛОКІВ ТА КНОПОК */
+/* ---------------------------------------------------------------------------------- */
+
+/* Уніфікований стиль для інформаційних блоків */
+.ppo-standard-block {
     background: #fff;
-    border: 1px solid #ff8c00; /* Основний оранжевий колір */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
+    border: 2px solid var(--ppo-orange); 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03); 
     padding: 20px;
-    border-radius: 8px; 
+    border-radius: var(--ppo-border-radius);
     margin-bottom: 25px;
 }
 
-/* Загальна сума */
-.ppo-total-sum {
+.ppo-payment-info-block {
+    /* Цей блок вже має помаранчевий кордон завдяки .ppo-standard-block */
+    border-radius: 25px; /* Зберігаємо більший радіус, якщо потрібно */
+}
+
+
+/* Заголовки блоків */
+/* Приховуємо стандартний h2 на користь нового блоку */
+.ppo-payment-page > h2 { 
+    display: none; 
+}
+
+.ppo-standard-block h3 {
+    border-bottom: 2px solid var(--ppo-primary-color);
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+    margin-top: 0; 
+    font-weight: 500;
+}
+
+
+/* ---------------------------------------------------------------------------------- */
+/* 0.1. СТИЛІ ДЛЯ НОВОГО БЛОКУ ЗАГОЛОВКА ОПЛАТИ */
+/* ---------------------------------------------------------------------------------- */
+
+.ppo-order-header-block {
+    /* Стандартизований стиль блоку вже застосовано через .ppo-standard-block */
+    text-align: center;
+}
+
+.ppo-order-header-block .ppo-order-title {
+    font-size: 1.5em; /* Великий шрифт для заголовка */
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column; /* Розділяємо рядки */
+    color: var(--ppo-primary-color);
+}
+
+.ppo-order-header-block .ppo-order-title span:first-child {
+    /* "Крок 3: Оплата замовлення" */
+    font-size: 1em;
+    padding-bottom: 10px;
+}
+
+.ppo-order-header-block .ppo-order-id-display {
+    /* "№20251202-0001" */
     font-size: 1.2em;
-    font-weight: bold;
-    color: #333;
-    padding: 10px 0;
-    border-bottom: 2px solid #ddd;
+    font-weight: 700;
+    padding-top: 10px;
+    color: var(--ppo-red-badge); /* Можна виділити номер червоним */
+    
+    border-top: 2px dashed var(--ppo-orange); /* Штрихова лінія */
+}
+
+/* ---------------------------------------------------------------------------------- */
+/* 0.2. СТИЛІ КНОПОК (В стилі кнопки "Замовити") */
+/* ---------------------------------------------------------------------------------- */
+
+.ppo-button {
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: var(--ppo-border-radius);
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    cursor: pointer;
+    box-sizing: border-box;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* Вторинна кнопка (для Редагувати) - тепер в стилі "Замовити" */
+.ppo-button-secondary {
+    /* Повторюємо стилі кнопки "Замовити", використовуючи помаранчевий як основний */
+    color: var(--ppo-white) !important;
+    background-color: var(--ppo-orange) !important; 
+    border: 2px solid var(--ppo-orange) !important;
+    font-size: 14px; 
+    padding: 8px 15px;
+}
+
+.ppo-button-secondary:hover {
+    color: var(--ppo-orange) !important;
+    background-color: var(--ppo-white) !important;
+    border-color: var(--ppo-orange) !important;
+}
+
+/* Контейнер кнопок внизу блоку */
+.ppo-action-buttons-bottom {
+    display: flex;
+    justify-content: flex-end; 
+    padding-top: 15px;
+    margin-top: 15px;
+    border-top: 1px dashed #ddd; /* Прибираємо помаранчевий, залишаємо нейтральний сірий для розділення */
+}
+
+
+/* ---------------------------------------------------------------------------------- */
+/* 1. БЛОК ІНФОРМАЦІЇ (без змін) */
+/* ---------------------------------------------------------------------------------- */
+
+.ppo-info-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    margin-bottom: 15px; 
+}
+.ppo-info-list li {
+    padding: 5px 0;
+    font-size: 14px;
+    color: var(--ppo-text-color);
+}
+.ppo-info-list li strong {
+    min-width: 120px; 
+    display: inline-block;
+    font-weight: 600;
+    color: var(--ppo-primary-color);
+}
+.ppo-delivery-address {
+    font-weight: 500;
+    color: #495057; 
+}
+.ppo-comment {
+    font-style: italic;
+    color: #777;
+    margin-top: 5px;
+}
+
+
+/* ---------------------------------------------------------------------------------- */
+/* 2. БЛОК ДЕТАЛЕЙ ЗАМОВЛЕННЯ ТА ПЛАТЕЖУ (без змін) */
+/* ---------------------------------------------------------------------------------- */
+
+.ppo-formats-list-container {
+    padding: 0;
     margin-bottom: 20px;
 }
-
-.ppo-total-sum strong {
-    color: #d9534f;
+.ppo-formats-list-container ul#ppo-formats-list {
+    list-style: none; 
+    padding-left: 0; 
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+.ppo-formats-list-container ul#ppo-formats-list li {
+    padding: 8px 0; 
+    border-bottom: 1px dashed #eeeeee; 
+    color: var(--ppo-text-color); 
+    font-size: 14px;
+    font-weight: 400; 
+}
+.ppo-formats-list-container ul#ppo-formats-list li:last-child {
+    border-bottom: none;
 }
 
-/* Заголовок способу оплати */
-.ppo-method-title {
+/* Фінальна підсумкова сума під списком */
+.ppo-total-sum.ppo-summary-text {
     font-size: 1.1em;
-    font-weight: 600;
+    padding-top: 10px;
+    border-top: 2px solid var(--ppo-orange); 
     margin-top: 15px;
-    margin-bottom: 10px;
-    color: #555;
-}
-
-
-/* ========================================================= */
-/* 2. СТИЛІ КНОПОК: Поруч та однакового розміру (ПОСИЛЕНО) */
-/* ========================================================= */
-
-/* Контейнер для кнопок: використовуємо Flexbox */
-.ppo-delivery-actions {
-    display: flex;
-    gap: 15px; 
-    align-items: stretch; /* Вирівнює елементи по висоті */
-    padding-top: 20px;
-    border-top: 1px solid #eee; /* Легкий роздільник над кнопками */
-    margin-top: 20px;
-    margin-bottom: 0;
-}
-
-/* Спільний клас для обох елементів (для рівної ширини) */
-.ppo-action-button {
-    flex-grow: 1; 
-    flex-basis: 0; /* ДОПОМАГАЄ Flexbox рівномірно розподілити простір */
-}
-
-/* 2.1 Стилізація кнопки "НАЗАД" (посилання) */
-.ppo-delivery-actions .ppo-button-secondary {
+    text-align: right; 
     display: block; 
-    width: 100%;
-    text-align: center;
-    /*padding: 12px 20px;*/
-    box-sizing: border-box; /* Гарантуємо коректну ширину */
+}
+.ppo-total-sum.ppo-summary-text strong {
+    font-weight: 700;
+    color: var(--ppo-red-badge); 
+}
+.ppo-total-sum.ppo-summary-text small {
+    font-size: 0.8em;
+    font-weight: 400;
+    color: #6c757d;
 }
 
-/* 2.2 Стилізація кнопки LiqPay */
+.ppo-payment-method-block {
+    margin-bottom: 15px; 
+}
 
-/* Обгортка LiqPay форми. Прибираємо margin, щоб не ламати Flexbox */
-.ppo-payment-liqpay-wrapper .cnb {
+/* ---------------------------------------------------------------------------------- */
+/* 3. СТИЛІ ДЛЯ КНОПКИ ОПЛАТИ (ОСНОВНА ДІЯ) - без змін */
+/* ---------------------------------------------------------------------------------- */
+
+.ppo-payment-button-wrapper {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+.ppo-payment-button-wrapper .cnb { 
+    margin: 0 !important;
+    height: 100%;
+    width: 100%;
+}
+.ppo-payment-button-wrapper form {
     margin: 0 !important;
     height: 100%;
 }
 
 /* Стилізація самої кнопки LiqPay */
-.ppo-payment-liqpay-wrapper .cnb .btn {
+.ppo-payment-button-wrapper input[type="submit"] {
     display: block !important; 
-    width: 100% !important; /* !!! ГАРАНТІЯ: Примусова повна ширина !!! */
-    box-sizing: border-box !important; /* !!! ГАРАНТІЯ: Включаємо padding/border у ширину !!! */
-    height: 100%; 
+    width: 100% !important; 
+    box-sizing: border-box !important; 
+    min-height: 48px; 
     
-    /* Дизайн кнопки */
-    padding: 12px 20px;
+    padding: 12px 20px !important;
     margin-top: 0 !important; 
-    font-size: 16px;
-    font-weight: bold;
-    line-height: 1.5;
-    text-align: center;
-    color: #fff;
-    background-color: #5cb85c; /* Зелений для оплати */
-    border: 1px solid #4cae4c;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    color: var(--ppo-white) !important;
+    background-color: var(--ppo-success-green) !important; 
+    border: 1px solid var(--ppo-success-green) !important;
+    border-radius: 8px !important; 
+    cursor: pointer !important;
+    transition: background-color 0.2s !important;
+    font-family: 'Montserrat', sans-serif !important; 
+    text-transform: uppercase;
 }
 
-.ppo-payment-liqpay-wrapper .cnb .btn:hover {
-    background-color: #449d44;
+.ppo-payment-button-wrapper input[type="submit"]:hover {
+    background-color: var(--ppo-success-green-hover) !important;
+    border-color: var(--ppo-success-green-hover) !important;
 }
 
 /* Примітка */
