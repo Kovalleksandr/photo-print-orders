@@ -40,7 +40,6 @@ function ppo_generate_liqpay_form(float $amount, string $ppo_order_id): string {
     
     try {
         // Ініціалізація класу 'LiqPay'
-        // ПРИМІТКА: Клас LiqPay має бути завантажений через Composer або іншим способом
         $liqpay = new LiqPay($public_key, $private_key);
         
         $description = sprintf('Оплата замовлення фотодруку №%s', $ppo_order_id);
@@ -114,7 +113,6 @@ function ppo_render_payment_form(): string {
     $has_order = !empty($session_formats);
     
     // Логіка визначення адреси для відображення
-    // Використовуємо ключ 'type', який ідентифікує тип доставки
     $delivery_method_type = $delivery_details['type'] ?? 'N/A'; 
     $address_details = '';
 
@@ -124,19 +122,70 @@ function ppo_render_payment_form(): string {
         $address_details = 'Точка видачі: [Адреса вашого магазину/точки] (Спосіб: ' . $method_name . ')'; 
     } elseif ($delivery_method_type === 'Нова Пошта (Відділення/Поштомат)') {
         $method_name = 'Нова Пошта';
-        // Використовуємо ключі 'city_name' та 'warehouse_name', знайдені у ppo-cpt-orders.php
         $city = $delivery_details['city_name'] ?? 'Н/Д'; 
-        $warehouse_display = $delivery_details['warehouse_name'] ?? 'Н/Д';
+        $warehouse_full = $delivery_details['warehouse_name'] ?? 'Н/Д';
         
-        // Формуємо рядок адреси для НП
-        if ($city !== 'Н/Д' || $warehouse_display !== 'Н/Д') {
-             // Виводимо повний рядок адреси, як у вас в адмінці
-             $address_details = 'Місто: ' . esc_html($city) . ', Відділення: ' . esc_html($warehouse_display) . ' (Спосіб: ' . $method_name . ')';
+        // ----------------------------------------------------
+        // >>> ОНОВЛЕНА ЛОГІКА: Розбір та формування адреси для багаторядкового виведення
+        // Бажаний формат: "Нова Пошта <br> Київ, <br> Відділення №49 (до 30 кг) <br> вул. Йорданська, 1"
+        // ----------------------------------------------------
+        
+        $address_parts = [];
+        
+        // 1. Додаємо тип доставки
+        $address_parts[] = '<strong>' . esc_html($method_name) . '</strong>';
+        
+        // 2. Додаємо місто
+        if ($city !== 'Н/Д') {
+            $address_parts[] = esc_html($city) . ',';
         }
+        
+        // 3. Обробка повного рядка відділення
+        if ($warehouse_full !== 'Н/Д') {
+            $trimmed_warehouse = $warehouse_full;
+            
+            // a) Обрізаємо зайвий хвіст (наприклад, (Київ, Йорданська, 1))
+            $last_open_bracket_pos = strrpos($warehouse_full, '(');
+            if ($last_open_bracket_pos !== false) {
+                 $trimmed_warehouse = trim(substr($warehouse_full, 0, $last_open_bracket_pos));
+                 $trimmed_warehouse = rtrim($trimmed_warehouse, ', ');
+            }
+            
+            // b) Розділяємо на 'Відділення' і 'вул.'
+            // Використовуємо ": " як роздільник, щоб отримати "Відділення №49 (до 30 кг)" та "вул. Йорданська, 1, ..."
+            $parts = explode(': ', $trimmed_warehouse, 2);
+            
+            $warehouse_info = trim($parts[0] ?? ''); // Відділення №49 (до 30 кг)
+            $street_info = trim($parts[1] ?? '');    // вул. Йорданська, 1, озеро"Вербне"(Оболонь)
+
+            // c) Обрізаємо зайві деталі вулиці, залишаючи "вул. ХХХ, Y"
+            $street_info_trimmed = $street_info;
+            // Використовуємо регулярку для надійного пошуку "вул. [Назва], [Номер]"
+            if (!empty($street_info) && preg_match('/(вул\..+?\d+)/u', $street_info, $matches)) {
+                $street_info_trimmed = trim($matches[1]);
+            }
+            
+            // d) Додаємо частини до масиву
+            if (!empty($warehouse_info)) {
+                $address_parts[] = esc_html($warehouse_info);
+            }
+            if (!empty($street_info_trimmed)) {
+                $address_parts[] = esc_html($street_info_trimmed);
+            }
+        }
+        
+        // 4. Формуємо кінцевий HTML-рядок з переносами рядків
+        $address_details = implode('<br>', $address_parts);
+        
+        // ----------------------------------------------------
+        // <<< КІНЕЦЬ НОВОЇ ЛОГІКИ
+        // ----------------------------------------------------
+
     }
     
     // Якщо жоден із відомих типів не спрацював, але тип заданий
     if (empty($address_details) && $delivery_method_type !== 'N/A') {
+        // У цьому випадку виводимо як раніше, щоб не втратити інфо
         $address_details = 'Спосіб: ' . esc_html($delivery_method_type);
     } elseif (empty($address_details) && $delivery_method_type === 'N/A') {
         $address_details = 'Адреса доставки не вказана.';
@@ -147,7 +196,7 @@ function ppo_render_payment_form(): string {
     <div class="ppo-order-form-container ppo-payment-page">
         <div class="ppo-step-block ppo-order-header-block ppo-standard-block">
             <h2 class="ppo-order-title">
-                <span>💳 Оплата замовлення</span>
+                <span>💳 Крок 3: Оплата замовлення</span>
                 <span class="ppo-order-id-display">№<?php echo esc_html($ppo_order_id); ?></span>
             </h2>
         </div>
@@ -168,9 +217,11 @@ function ppo_render_payment_form(): string {
 
             <ul class="ppo-info-list ppo-delivery-info-list">
                 <?php 
-                // Вивід АДРЕСИ. Вона тепер містить деталі НП або самовивозу
+                // Вивід АДРЕСИ. Виводиться без esc_html, бо містить теги <br> та <strong>
                 if (!empty($address_details)): ?>
-                    <li><strong>Адреса:</strong> <?php echo esc_html($address_details); ?></li>
+                    <li>
+                        <strong>Адреса:</strong> <li><?php echo $address_details; ?></li>
+                    </li>
                 <?php endif; ?>
                 
                 <?php if (!empty($delivery_details['comment'])): ?>
